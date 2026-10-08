@@ -138,6 +138,7 @@ jobs:
           echo "::notice title=Application live::${url}"
   smoke:
     name: Smoke test
+    timeout-minutes: 15
     needs: application
     runs-on: ubuntu-latest
     environment: infra-deploy
