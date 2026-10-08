@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   foundation:
+    name: Foundation infrastructure
     runs-on: ubuntu-latest
     environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
     env:
