@@ -21,7 +21,7 @@ class SPAStaticFiles(StaticFiles):
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="BY Chat API",
+        title="YounderChat API",
         version="0.1.0",
         docs_url="/api/docs" if settings.app_env == "development" else None,
         redoc_url=None,

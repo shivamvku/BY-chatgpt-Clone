@@ -1,8 +1,8 @@
-# BY Chat
+# YounderChat
 
 React + Material UI and Python FastAPI scaffolds with Azure infrastructure managed through Terraform. This milestone provides deployment foundations and health endpoints. Authentication, conversation persistence and AI streaming are not implemented yet.
 
-See the [project goal and delivery criteria](docs/goal/README.md). Kiro coding guidance lives in [`.kiro/steering/`](.kiro/steering/), with shared product/engineering context and separate API, UI and infrastructure standards.
+See the [implementation plan](docs/implementation-plan.md), the single source of truth for goals, scope, status and acceptance criteria. Kiro coding guidance lives in [`.kiro/steering/`](.kiro/steering/), with shared product/engineering context and separate API, UI and infrastructure standards.
 
 ## Repository
 
@@ -61,4 +61,4 @@ See [infrastructure setup](infra/README.md) for credential-free Terraform valida
 
 ## Current boundaries
 
-The UI is a foundation screen, not a functional chat clone. No AI model deployment, Redis, uploads, static egress IP, custom domain or firewall is provisioned. Development infrastructure trade-offs are documented in the infrastructure guide. Public authentication/chat features require further security work, including restricted database runtime credentials.
+See the [implementation plan](docs/implementation-plan.md) for current capabilities and pending work. Development infrastructure trade-offs and deployment instructions are documented in the infrastructure guide.

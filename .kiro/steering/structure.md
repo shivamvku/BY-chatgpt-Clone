@@ -14,6 +14,6 @@ inclusion: always
 - `infra/terraform/modules/`: reusable Azure modules; `environments/dev/`: separate foundation, migration and application state roots.
 - `infra/docker/`, `scripts/`, `pipelines/`, `config/`, `docs/`: containers, deployment tools, pipeline helpers, nonsecret environment configuration and operational documentation.
 - `.github/workflows/`: GitHub workflow entrypoints. Keep substantial deployment logic under `infra/`.
-- `.kiro/steering/`: persistent agent guidance; `docs/goal/README.md`: project goal and completion criteria.
+- `.kiro/steering/`: persistent coding guidance; `docs/implementation-plan.md`: single source of truth for goals, scope, status and acceptance criteria.
 
 Do not put cloud resource creation in frontend or backend code. Do not mix API business logic into routes or scatter feature state across generic utilities. Read the matching API, UI or infrastructure steering file before working in that area, even when automatic file matching has not activated it.

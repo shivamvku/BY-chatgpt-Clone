@@ -20,7 +20,7 @@ jobs:
       - run: pytest
         working-directory: backend
   frontend:
-    name: Frontend lint, tests and build
+    name: Frontend typecheck and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -70,6 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: infra-deploy
     env:
+      TF_VAR_image: ${{ needs.image.outputs.image }}
       ARM_USE_OIDC: 'true'
       ARM_USE_AZUREAD: 'true'
       ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
@@ -97,7 +98,7 @@ jobs:
       - run: bash infra/pipelines/migrate.sh
   application:
     name: Deploy application
-    needs: migrations
+    needs: [image, migrations]
     runs-on: ubuntu-latest
     environment: infra-deploy
     outputs:
