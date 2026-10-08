@@ -38,7 +38,7 @@ jobs:
       - run: terraform fmt -check -recursive infra
       - name: Validate all roots without Azure credentials
         run: |
-          for root in infra/bootstrap infra/terraform/environments/dev/{foundation,migrations,application}; do
+          for root in infra/bootstrap infra/terraform/environments/dev/{foundation,migrations,application,domains}; do
             terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
             terraform -chdir="$root" validate
           done
@@ -46,6 +46,8 @@ jobs:
         run: terraform -chdir=infra/terraform/environments/dev/foundation test
       - name: Test GitHub federation subjects with mocked Azure providers
         run: terraform -chdir=infra/bootstrap test
+      - name: Test custom-domain TLS configuration with mocked Azure providers
+        run: terraform -chdir=infra/terraform/environments/dev/domains test
   docker:
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,57 @@
+name: Custom domain
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Plan or connect the configured subdomain
+        type: choice
+        options: [plan, apply]
+        default: plan
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: azure-dev-deployment
+  cancel-in-progress: false
+jobs:
+  domain:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
+    env:
+      ARM_USE_OIDC: 'true'
+      ARM_USE_AZUREAD: 'true'
+      ARM_CLIENT_ID: ${{ inputs.action == 'apply' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+      TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+      TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_state_resource_group: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+      TF_VAR_state_storage_account: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+      AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: '1.13.5'
+      - name: Show required DNS records for manual GoDaddy setup
+        run: python3 infra/pipelines/show-dns.py
+      - name: Wait for DNS propagation
+        if: inputs.action == 'apply'
+        run: bash infra/pipelines/wait-dns.sh
+      - run: bash infra/pipelines/init-state.sh domains
+      - run: terraform -chdir=infra/terraform/environments/dev/domains plan -input=false -out=domain.tfplan
+      - if: inputs.action == 'apply'
+        run: terraform -chdir=infra/terraform/environments/dev/domains apply -input=false domain.tfplan
+      - name: Verify custom-domain HTTPS
+        if: inputs.action == 'apply'
+        run: |
+          url=$(terraform -chdir=infra/terraform/environments/dev/domains output -raw url)
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 "$url/api/health/ready"
+          curl --fail --silent --show-error "$url/" >/dev/null

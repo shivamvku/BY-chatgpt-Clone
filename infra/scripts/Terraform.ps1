@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('bootstrap','foundation','migrations','application')][string]$Stack,
+    [Parameter(Mandatory)][ValidateSet('bootstrap','foundation','migrations','application','domains')][string]$Stack,
     [Parameter(Mandatory)][ValidateSet('init','validate','plan','apply')][string]$Action,
     [string]$VariablesFile,
     [string]$BackendFile,
