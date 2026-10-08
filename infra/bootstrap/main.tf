@@ -11,7 +11,8 @@ resource "random_string" "suffix" {
   special = false
 }
 locals {
-  tags = { project = "by-chat", environment = "dev", managed_by = "terraform" }
+  tags                      = { project = "by-chat", environment = "dev", managed_by = "terraform" }
+  github_repository_subject = coalesce(var.github_repository_subject, var.github_repository)
 }
 resource "azurerm_resource_group" "state" {
   name     = "${var.name}-tfstate-rg"
@@ -66,7 +67,7 @@ resource "azurerm_federated_identity_credential" "ci" {
   parent_id           = each.value.id
   audience            = ["api://AzureADTokenExchange"]
   issuer              = "https://token.actions.githubusercontent.com"
-  subject             = "repo:${var.github_repository}:environment:infra-${each.key}"
+  subject             = "repo:${local.github_repository_subject}:environment:infra-${each.key}"
 }
 resource "azurerm_role_assignment" "ci_rg" {
   for_each             = azurerm_user_assigned_identity.ci

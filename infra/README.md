@@ -91,6 +91,8 @@ gh auth login
 
 The script configures non-secret Azure identifiers as repository variables and creates `infra-plan` / `infra-deploy` environments restricted to the repository's default branch. It does not configure required reviewers. Federation subjects match these environment names exactly. This script was executed and its variables and `main` branch restriction verified on 8 October 2026; workflows have not run end to end yet.
 
+GitHub repositories created after 15 July 2026 use immutable OIDC subjects containing owner and repository IDs. Set bootstrap `github_repository_subject` to `OWNER@OWNER_ID/REPO@REPO_ID`; obtain the IDs using `gh api repos/OWNER/REPO --jq '{owner_id: .owner.id, repository_id: .id}'`. The example contains verified IDs for this repository. Leave this variable null only for a repository that still uses the legacy names-only subject. Federation remains restricted to the exact `infra-plan` / `infra-deploy` environment. See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
+
 The configuration script sets `AZURE_BUDGET_ALERT_EMAIL` from your signed-in Azure account, or from its explicit `-BudgetEmail` parameter. The infrastructure workflow combines this contact with the versioned `config/budget.json` policy. Missing contact configuration fails the workflow rather than silently omitting the budget. No notification email is committed in the repository. Check billing currency again if using another subscription; `expected_currency` documents the verified currency and does not change Azure's currency.
 
 Workflows:

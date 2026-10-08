@@ -2,3 +2,5 @@ subscription_id = "REPLACE_SUBSCRIPTION_ID"
 location = "centralus"
 name = "bychat-dev"
 github_repository = "shivamvku/BY-chatgpt-Clone"
+# Verified IDs for this repository. Resolve new IDs when using another repository.
+github_repository_subject = "shivamvku@18441690/BY-chatgpt-Clone@1410171531"

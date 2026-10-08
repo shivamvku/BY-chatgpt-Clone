@@ -44,6 +44,8 @@ jobs:
           done
       - name: Test networking policies with mocked Azure providers
         run: terraform -chdir=infra/terraform/environments/dev/foundation test
+      - name: Test GitHub federation subjects with mocked Azure providers
+        run: terraform -chdir=infra/bootstrap test
   docker:
     runs-on: ubuntu-latest
     steps:
