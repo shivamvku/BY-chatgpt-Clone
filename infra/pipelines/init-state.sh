@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 stack="${1:?stack required}"
-case "$stack" in foundation|migrations|application) ;; *) echo "Invalid stack" >&2; exit 1;; esac
+case "$stack" in foundation|migrations|application|domains) ;; *) echo "Invalid stack" >&2; exit 1;; esac
 : "${TF_STATE_RESOURCE_GROUP:?}" "${TF_STATE_STORAGE_ACCOUNT:?}"
 arguments=(
   "-chdir=infra/terraform/environments/dev/$stack"
