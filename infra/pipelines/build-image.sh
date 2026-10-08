@@ -13,3 +13,6 @@ if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
   exit 1
 fi
 printf 'TF_VAR_image=%s/by-chat@%s\n' "$server" "$digest" >> "$GITHUB_ENV"
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  printf 'image=%s/by-chat@%s\n' "$server" "$digest" >> "$GITHUB_OUTPUT"
+fi
