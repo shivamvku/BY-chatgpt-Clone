@@ -12,7 +12,7 @@ Azure resources must be managed through infrastructure code. GoDaddy DNS records
 
 As of 8 October 2026, Terraform bootstrap/foundation, private PostgreSQL, registry, Key Vault, logging, managed identities, remote state and budget alerts are deployed. The migration job and application scaffold were released through the previous workflow. The custom domain https://aichat.sdigurukulam.in passed HTTPS and database readiness checks. Local PostgreSQL uses port 25432.
 
-The corrected staged release workflow is locally validated but has not been committed or verified end to end. YounderChat naming changes are local. Authentication, application schema migrations, restricted runtime database credentials, saved conversations, real AI streaming and the complete chat UI remain pending.
+As of 9 October 2026, release reliability is complete. Commit `363a5cc` passed [CI](https://github.com/shivamvku/BY-chatgpt-Clone/actions/runs/37825117962) and the [full staged release](https://github.com/shivamvku/BY-chatgpt-Clone/actions/runs/37825599492): backend/frontend checks, image push, migrations, application deployment and smoke tests. YounderChat naming is deployed. Smoke requests have bounded connection/request/retry durations and a job timeout after an earlier run stalled. Authentication, application schema migrations, restricted runtime database credentials, saved conversations, real AI streaming and the complete chat UI remain pending. The next milestone is the bounded theme foundation.
 
 ## Delivery order
 
@@ -46,7 +46,7 @@ Voice, web search, image generation, document retrieval and sandboxed code execu
 | 6. Rich content | Required images/tables/lists and action menus work at mobile widths with safe rendering. Implemented copy, search/filter, export, syntax and chart features have functional checks; edit/regeneration branches preserve history. |
 | 7. Submission | Browser/API tests and release smoke checks pass; README reproduces setup; architecture, configuration, limitations, screenshots/recording and live URL reflect implemented behavior. |
 
-Milestone 1 remains open: commit `2d0765d` introduced the staged workflow but did not fix image propagation. Those corrections have been validated locally and still need a committed CI run and end-to-end release. The earlier successful application release used the previous workflow.
+Milestone 1 is complete with the CI and staged-release evidence linked above. Migrations and application deployment consume the same immutable image output. Future feature releases must continue to pass the smoke checks.
 
 ## Boundaries and acceptance
 
