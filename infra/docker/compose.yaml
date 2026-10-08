@@ -1,0 +1,29 @@
+services:
+  database:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: chat
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-25432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://chat:local-development-only@database:5432/chat
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+volumes:
+  postgres_data:

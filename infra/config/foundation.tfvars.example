@@ -1,0 +1,11 @@
+subscription_id = "REPLACE_SUBSCRIPTION_ID"
+name = "bychat-dev"
+registry_sku = "Standard"
+resource_group_name = "bychat-dev-rg"
+deploy_principal_id = "FROM_BOOTSTRAP_OUTPUT"
+plan_principal_id = "FROM_BOOTSTRAP_OUTPUT"
+operator_principal_id = "FROM_BOOTSTRAP_OUTPUT"
+
+# Selected monthly budget. Azure billing currency verified as INR.
+# Keep this consistent with infra/config/budget.json.
+budget = { amount = 1500, email = "REPLACE_ALERT_EMAIL", start_date = "2026-10-01T00:00:00Z" }

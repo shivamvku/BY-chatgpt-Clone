@@ -1,0 +1,10 @@
+resource "azurerm_log_analytics_workspace" "this" {
+  name                = "${var.name}-logs"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  daily_quota_gb      = 1
+  tags                = var.tags
+}
+output "workspace_id" { value = azurerm_log_analytics_workspace.this.id }

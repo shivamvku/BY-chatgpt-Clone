@@ -1,26 +1,78 @@
-@"
+# Local environment and secrets
 .env
 .env.*
 !.env.example
+!*.env.example
+*.pem
+*.key
+*.pfx
+*.p12
 
-__pycache__/
-*.py[cod]
-
+# Python environments, caches, and package output
 .venv/
 venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.egg-info/
+*.egg
 
+# Frontend dependencies, builds, and test reports
 node_modules/
 dist/
 build/
+coverage/
+.vite/
+.eslintcache
+*.tsbuildinfo
+playwright-report/
+test-results/
 
-.pytest_cache/
-.coverage
+# Terraform downloads, sensitive state, plans, and local configuration
+# Keep .terraform.lock.hcl and example configuration in Git.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+backend.hcl
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc
+*_override.tf
+*_override.tf.json
+override.tf
+override.tf.json
+infra/bootstrap/backend.remote.tf
 
+# Local tooling and temporary files
+*.log
+.codex-tmp/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
 .vscode/
 .idea/
 
-*.log
-
+# Operating system metadata
 .DS_Store
 Thumbs.db
-"@ | Out-File -Encoding utf8 .gitignore
+Desktop.ini

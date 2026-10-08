@@ -1,0 +1,6 @@
+{
+  "name": "by-chat-frontend", "private": true, "version": "0.1.0", "type": "module",
+  "scripts": {"dev": "vite --host 0.0.0.0", "build": "tsc -b && vite build", "preview": "vite preview"},
+  "dependencies": {"react": "^19.0.0", "react-dom": "^19.0.0", "@mui/material": "^7.0.0", "@mui/icons-material": "^7.0.0", "@emotion/react": "^11.14.0", "@emotion/styled": "^11.14.0", "@tanstack/react-query": "^5.0.0", "zustand": "^5.0.0"},
+  "devDependencies": {"typescript": "~5.8.3", "vite": "^6.3.0", "@vitejs/plugin-react": "^4.4.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@types/node": "^22.0.0"}
+}

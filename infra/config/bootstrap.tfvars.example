@@ -1,0 +1,4 @@
+subscription_id = "REPLACE_SUBSCRIPTION_ID"
+location = "centralus"
+name = "bychat-dev"
+github_repository = "shivamvku/BY-chatgpt-Clone"
