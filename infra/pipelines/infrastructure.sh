@@ -3,7 +3,8 @@ set -euo pipefail
 case "${STACK:?}" in foundation|domains) ;; *) echo 'Invalid stack' >&2; exit 1;; esac
 case "${ACTION:?}" in plan|apply) ;; *) echo 'Invalid action' >&2; exit 1;; esac
 if [[ "$STACK" == foundation ]]; then
-  python3 infra/pipelines/configure-budget.py
+  export TF_VAR_budget="$(python3 infra/pipelines/configure-budget.py)"
+  [[ -n "$TF_VAR_budget" ]] || { echo 'Budget policy could not be loaded' >&2; exit 1; }
   python3 infra/pipelines/check-ai.py
   python3 infra/pipelines/check-db-access.py
 else
@@ -13,6 +14,7 @@ fi
 bash infra/pipelines/init-state.sh "$STACK"
 root="infra/terraform/environments/dev/$STACK"
 terraform -chdir="$root" plan -input=false -out=reviewed.tfplan
+terraform -chdir="$root" show -json reviewed.tfplan | python3 infra/pipelines/guard-plan.py
 if [[ "$ACTION" == apply ]]; then
   terraform -chdir="$root" apply -input=false reviewed.tfplan
 fi
