@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api, streamResponse } from '../../shared/api';
 import type { Conversation, Message } from '../../shared/types';
 
@@ -43,7 +44,10 @@ export function useChat(id: string | null, select: (id: string) => void) {
     // The finally block below does the post-stream refresh.
     try {
       await streamResponse(answer.id, controller.current.signal, (kind, value) => {
-        if (kind === 'error') setError(value.message);
+        if (kind === 'error') {
+          setError(value.message);
+          toast.error(value.message);
+        }
         queries.setQueryData<Message[]>(key, (rows) => {
           const updated = rows?.map((row) =>
             row.id !== answer.id
@@ -84,9 +88,15 @@ export function useChat(id: string | null, select: (id: string) => void) {
       running.current = null;
       setGenerating(false);
       controller.current = null;
-      await queries.invalidateQueries({ queryKey: key });
-      await queries.invalidateQueries({ queryKey: ['history'] });
-      await queries.invalidateQueries({ queryKey: ['usage'] });
+      // Invalidate with refetchType 'none' first so the cache is marked stale
+      // without being cleared — this prevents the landing empty state from
+      // flashing. Then do a quiet background refetch that won't set isLoading.
+      await queries.invalidateQueries({ queryKey: key, refetchType: 'none' });
+      void queries.refetchQueries({ queryKey: key, type: 'active' });
+      await queries.invalidateQueries({ queryKey: ['history'], refetchType: 'none' });
+      void queries.refetchQueries({ queryKey: ['history'], type: 'active' });
+      await queries.invalidateQueries({ queryKey: ['usage'], refetchType: 'none' });
+      void queries.refetchQueries({ queryKey: ['usage'], type: 'active' });
     }
   }
   async function send(content: string, parentId: string | null, model = 'gemini-3.5-flash') {
@@ -127,10 +137,8 @@ export function useChat(id: string | null, select: (id: string) => void) {
       retry.current = null;
 
       if (isNewConversation) {
-        // Seed the cache with the real user message returned by the server
-        // (or an optimistic one if the server didn't include it yet), then
-        // switch the active conversation. This order prevents a loading flash
-        // because the cache is populated before the workspace re-renders.
+        // Seed the cache with an optimistic user message before switching
+        // active conversation so the UI never flashes a loading spinner.
         const now = Date.now();
         const optimisticUser: Message = {
           id: crypto.randomUUID(),
@@ -144,6 +152,32 @@ export function useChat(id: string | null, select: (id: string) => void) {
         };
         queries.setQueryData<Message[]>(['messages', conversationId], [optimisticUser]);
         select(conversationId);
+      } else {
+        // For existing conversations, optimistically append the new user
+        // message and the pending assistant placeholder to the cache so the
+        // UI never flashes the landing empty state while waiting for the
+        // server refetch.
+        const now = Date.now();
+        queries.setQueryData<Message[]>(['messages', conversationId], (rows) => {
+          const existing = rows ?? [];
+          // Avoid duplicates if the message is already in cache (idempotency retry)
+          if (existing.some((r) => r.id === answer.id)) return existing;
+          const userMsg: Message = {
+            id: crypto.randomUUID(),
+            role: 'user',
+            content,
+            status: 'complete',
+            model,
+            parent_id: parentId,
+            created_at: now,
+            updated_at: now,
+          };
+          const assistantPlaceholder: Message = {
+            ...answer,
+            content: '',
+          };
+          return [...existing, userMsg, assistantPlaceholder];
+        });
       }
 
       if (answer.status !== 'pending') {
@@ -159,7 +193,9 @@ export function useChat(id: string | null, select: (id: string) => void) {
       });
       return true;
     } catch (failure) {
-      setError((failure as Error).message);
+      const msg = (failure as Error).message;
+      setError(msg);
+      toast.error(msg);
       // Also invalidate usage so the sidebar bar reflects the current state
       void queries.invalidateQueries({ queryKey: ['usage'] });
       setBusy(false);
