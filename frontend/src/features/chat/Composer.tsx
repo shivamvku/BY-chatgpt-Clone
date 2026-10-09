@@ -3,12 +3,13 @@ import type { FormEvent } from 'react';
 import {
   Alert,
   Box,
+  Button,
   Divider,
   IconButton,
   ListSubheader,
+  Menu,
   MenuItem,
   Paper,
-  Select,
   Stack,
   TextField,
   Tooltip,
@@ -16,6 +17,7 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import MicNoneOutlined from '@mui/icons-material/MicNoneOutlined';
 import StopRounded from '@mui/icons-material/StopRounded';
 import { request } from '../../shared/api';
@@ -31,6 +33,14 @@ type SpeechRecognitionLike = {
   onend: () => void;
   onerror: () => void;
 };
+
+/** Strip provider prefix for a compact button label. */
+function shortName(name: string): string {
+  return name
+    .replace(/^Gemini\s+/i, '')   // "Gemini 3.5 Flash" → "3.5 Flash"
+    .replace(/^Groq\s+·\s+/i, '') // "Groq · Qwen 3.8 27B" → "Qwen 3.8 27B"
+    .trim();
+}
 
 export function Composer({
   busy,
@@ -54,15 +64,18 @@ export function Composer({
   const [text, setText] = useState(''),
     [uploading, setUploading] = useState(false),
     [listening, setListening] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const fileInput = useRef<HTMLInputElement>(null),
     recognition = useRef<SpeechRecognitionLike | null>(null);
   const selected = models.find((item) => item.id === model);
+
   async function submit(event?: FormEvent) {
     event?.preventDefault();
     if (!text.trim() || busy || !enabled || uploading || !selected?.available) return;
     if (await onSend(text)) setText('');
   }
+
   async function upload(file?: File) {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) return setError('Choose an image under 2 MB.');
@@ -83,6 +96,7 @@ export function Composer({
       if (fileInput.current) fileInput.current.value = '';
     }
   }
+
   function dictate() {
     const windowWithSpeech = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionLike;
@@ -107,6 +121,10 @@ export function Composer({
     setListening(true);
     instance.start();
   }
+
+  const geminiModels = models.filter((m) => m.name.toLowerCase().includes('gemini'));
+  const groqModels = models.filter((m) => m.name.toLowerCase().includes('groq'));
+
   return (
     <Box>
       {!enabled && (
@@ -122,9 +140,13 @@ export function Composer({
       <Paper
         component="form"
         onSubmit={submit}
-        elevation={0}
-        variant="outlined"
-        sx={{ p: 1.25, borderRadius: 4, boxShadow: '0 8px 28px rgba(0,0,0,.06)' }}
+        elevation={2}
+        sx={{
+          p: 1.5,
+          borderRadius: 3,
+          boxShadow: '0 4px 20px rgba(0,0,0,.08)',
+          border: 'none',
+        }}
       >
         <TextField
           fullWidth
@@ -143,9 +165,13 @@ export function Composer({
               void submit();
             }
           }}
-          sx={{ '& fieldset': { border: 0 }, '& .MuiInputBase-root': { p: 0.75 }, '& textarea::placeholder': { color: 'text.secondary', opacity: 0.7 } }}
+          sx={{
+            '& fieldset': { border: 0 },
+            '& .MuiInputBase-root': { p: 0.75 },
+            '& textarea::placeholder': { color: 'text.secondary', opacity: 0.7 },
+          }}
         />
-        {text.length > 0 && (
+        {text.length > 8000 && (
           <Typography
             variant="caption"
             color={text.length > 10000 ? 'error' : 'text.secondary'}
@@ -154,12 +180,14 @@ export function Composer({
             {text.length.toLocaleString()} / 12,000
           </Typography>
         )}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} mt={0.5}>
+          {/* LEFT: attachment + mic */}
           <Stack direction="row" alignItems="center" gap={0.5}>
             <Tooltip title="Add image">
               <span>
                 <IconButton
                   aria-label="Add image"
+                  size="small"
                   disabled={busy || uploading}
                   onClick={() => fileInput.current?.click()}
                 >
@@ -178,6 +206,7 @@ export function Composer({
               <span>
                 <IconButton
                   aria-label="Voice input"
+                  size="small"
                   disabled={busy}
                   color={listening ? 'primary' : 'default'}
                   onClick={dictate}
@@ -186,84 +215,135 @@ export function Composer({
                 </IconButton>
               </span>
             </Tooltip>
-            <Select
-              value={model}
-              size="small"
-              disabled={busy}
-              onChange={(event) => onModelChange(event.target.value)}
-              inputProps={{ 'aria-label': 'AI model' }}
-              sx={{ minWidth: 200 }}
+          </Stack>
+
+          {/* RIGHT: model selector chip + send/stop */}
+          <Stack direction="row" alignItems="center" gap={1}>
+            <Tooltip title="Select model">
+              <span>
+                <Button
+                  size="small"
+                  disabled={busy}
+                  endIcon={<KeyboardArrowDownIcon />}
+                  onClick={(e) => setMenuAnchor(e.currentTarget)}
+                  aria-label={`Model: ${selected?.name ?? 'Select'}`}
+                  aria-haspopup="listbox"
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: '0.8rem',
+                    borderRadius: 5,
+                    px: 1.5,
+                    py: 0.5,
+                    color: 'text.secondary',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': { borderColor: 'text.secondary' },
+                    minWidth: 0,
+                  }}
+                >
+                  {selected ? shortName(selected.name) : 'Model'}
+                </Button>
+              </span>
+            </Tooltip>
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={() => setMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { maxHeight: 300, overflowY: 'auto', minWidth: 200 } } }}
             >
-              {/* Auto always first */}
-              {models
-                .filter((m) => m.id === 'auto')
-                .map((m) => (
-                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
-                    {m.name}
-                  </MenuItem>
-                ))}
               {/* Gemini group */}
-              {models.some((m) => m.id !== 'auto' && m.name.toLowerCase().includes('gemini')) && (
+              {geminiModels.length > 0 && (
                 <ListSubheader disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
                   Gemini
                 </ListSubheader>
               )}
-              {models
-                .filter((m) => m.id !== 'auto' && m.name.toLowerCase().includes('gemini'))
-                .map((m) => (
-                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
-                    {m.name}
-                    {!m.available ? ' (unavailable)' : ''}
-                  </MenuItem>
-                ))}
+              {geminiModels.map((m) => (
+                <MenuItem
+                  key={m.id}
+                  selected={m.id === model}
+                  disabled={!m.available}
+                  onClick={() => {
+                    onModelChange(m.id);
+                    setMenuAnchor(null);
+                  }}
+                  sx={{ fontSize: '0.875rem' }}
+                >
+                  {shortName(m.name)}
+                  {!m.available && (
+                    <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>
+                      unavailable
+                    </Typography>
+                  )}
+                </MenuItem>
+              ))}
               {/* Groq group */}
-              {models.some((m) => m.name.toLowerCase().includes('groq')) && (
-                [
-                  <Divider key="groq-divider" />,
-                  <ListSubheader key="groq-header" disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
-                    Groq
-                  </ListSubheader>,
-                ]
-              )}
-              {models
-                .filter((m) => m.name.toLowerCase().includes('groq'))
-                .map((m) => (
-                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
-                    {m.name.replace('Groq · ', '')}
-                    {!m.available ? ' (unavailable)' : ''}
-                  </MenuItem>
-                ))}
-            </Select>
+              {groqModels.length > 0 && [
+                <Divider key="groq-divider" />,
+                <ListSubheader key="groq-header" disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
+                  Groq
+                </ListSubheader>,
+              ]}
+              {groqModels.map((m) => (
+                <MenuItem
+                  key={m.id}
+                  selected={m.id === model}
+                  disabled={!m.available}
+                  onClick={() => {
+                    onModelChange(m.id);
+                    setMenuAnchor(null);
+                  }}
+                  sx={{ fontSize: '0.875rem' }}
+                >
+                  {shortName(m.name)}
+                  {!m.available && (
+                    <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>
+                      unavailable
+                    </Typography>
+                  )}
+                </MenuItem>
+              ))}
+            </Menu>
+            {busy ? (
+              <IconButton
+                aria-label="Stop"
+                color="primary"
+                onClick={onStop}
+                disabled={!canStop}
+                size="small"
+              >
+                <StopRounded />
+              </IconButton>
+            ) : (
+              <IconButton
+                aria-label="Send message"
+                type="submit"
+                size="small"
+                disabled={!text.trim() || !enabled || uploading || !selected?.available}
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  '&:hover': { bgcolor: 'primary.dark' },
+                  '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
+                }}
+              >
+                <ArrowUpward />
+              </IconButton>
+            )}
           </Stack>
-          {busy ? (
-            <IconButton aria-label="Stop" color="primary" onClick={onStop} disabled={!canStop}>
-              <StopRounded />
-            </IconButton>
-          ) : (
-            <IconButton
-              aria-label="Send message"
-              type="submit"
-              disabled={!text.trim() || !enabled || uploading || !selected?.available}
-              sx={{
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': { bgcolor: 'primary.dark' },
-              }}
-            >
-              <ArrowUpward />
-            </IconButton>
-          )}
         </Stack>
       </Paper>
       <Typography
         textAlign="center"
         variant="caption"
-        color="text.secondary"
+        color="text.disabled"
         display="block"
-        mt={1}
+        mt={0.5}
+        sx={{ fontSize: '0.65rem' }}
       >
-        AI can make mistakes. Check important information. Uploaded images are private and are not
-        sent to the model.
+        AI can make mistakes. Check important info.
       </Typography>
     </Box>
   );

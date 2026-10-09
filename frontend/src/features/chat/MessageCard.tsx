@@ -47,12 +47,19 @@ export function MessageCard({
     index = variants.findIndex((row) => row.id === message.id);
   const active = ['pending', 'streaming', 'stopping'].includes(message.status);
   return (
-    <Box component="article" sx={{ py: 2.5 }}>
-      <Stack direction="row" alignItems="center" gap={1} mb={1}>
+    <Box component="article" data-msg="true" sx={{ py: 3 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent={message.role === 'user' ? 'flex-end' : 'flex-start'}
+        gap={1}
+        mb={0.5}
+      >
         <Typography
           variant="overline"
-          fontWeight={800}
-          color={message.role === 'assistant' ? 'primary' : 'text.secondary'}
+          fontWeight={700}
+          fontSize="0.65rem"
+          color={message.role === 'assistant' ? 'primary' : 'text.disabled'}
         >
           {message.role === 'assistant' ? 'YounderChat' : 'You'}
         </Typography>
@@ -68,8 +75,14 @@ export function MessageCard({
         <Box
           sx={
             message.role === 'user'
-              ? { bgcolor: 'action.hover', p: 2, borderRadius: 3, maxWidth: '85%' }
-              : {}
+              ? {
+                  bgcolor: 'action.hover',
+                  px: 2.5,
+                  py: 1.5,
+                  borderRadius: 4,
+                  maxWidth: '70%',
+                }
+              : { maxWidth: '100%' }
           }
         >
           <RichContent
@@ -82,7 +95,7 @@ export function MessageCard({
         sx={{
           opacity: active || message.status === 'failed' ? 1 : 0,
           transition: 'opacity 0.15s',
-          '.MuiBox-root:hover &, &:focus-within': { opacity: 1 },
+          '[data-msg="true"]:hover &, &:focus-within': { opacity: 1 },
         }}
       >
         <Stack direction="row" alignItems="center" gap={0.5} mt={0.5}>
