@@ -16,10 +16,7 @@ def main() -> None:
         "start_date": policy["start_date"],
         "email": email,
     }
-    with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as environment:
-        environment.write(
-            f"TF_VAR_budget={json.dumps(budget, separators=(',', ':'))}\n"
-        )
+    print(json.dumps(budget, separators=(",", ":")))
 
 
 if __name__ == "__main__":
