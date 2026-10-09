@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { verifyEmail } from './account-email';
 
 test('stream, persist, branch, export, archive and delete a conversation', async ({ page }) => {
   await page.goto('/');
@@ -9,6 +10,7 @@ test('stream, persist, branch, export, archive and delete a conversation', async
     .fill(`chat-${Date.now()}-${test.info().project.name}@example.com`);
   await page.getByLabel(/^Password/).fill('chat-test-password');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await verifyEmail(page);
   await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Compare my options');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.getByText('A useful starting point')).toBeVisible();
@@ -64,6 +66,7 @@ test('shows provider failure and supports stopping a response', async ({ page })
     .fill(`failure-${Date.now()}-${test.info().project.name}@example.com`);
   await page.getByLabel(/^Password/).fill('failure-test-password');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await verifyEmail(page);
   await page.getByRole('textbox', { name: 'Message', exact: true }).fill('simulate failure');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.getByText('failed', { exact: true })).toBeVisible();

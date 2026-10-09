@@ -45,6 +45,10 @@ def register(client, email="user@example.com"):
     )
     assert response.status_code == 201, response.text
     client.headers["X-CSRF-Token"] = response.json()["csrf"]
+    # Most existing chat tests exercise verified accounts; verification has dedicated tests.
+    with Session(get_engine()) as db:
+        db.get(User, response.json()["user"]["id"]).verified_user = True
+        db.commit()
     return response.json()["user"]
 
 

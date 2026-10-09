@@ -1,6 +1,11 @@
 variable "subscription_id" {
   type = string
 }
+variable "resend_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
 variable "resource_group_name" {
   type = string
 }

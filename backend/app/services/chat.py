@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import UTC, datetime
+from functools import lru_cache
 
 from fastapi import HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
@@ -19,16 +20,22 @@ from app.schemas.contracts import (
 )
 from app.services.conversations import owned, prepare_generation
 from app.services.generation import claim, events
+from app.services.retention import cutoff
 from app.services.security import Identity
+from app.services.subscriptions import limits, policy
 
 
 def models(*, current: Identity):
     settings = get_settings()
+    return model_metadata(settings.llm_endpoint, settings.llm_model)
+
+
+@lru_cache(maxsize=8)
+def model_metadata(endpoint: str, model: str):
+    """Bounded cache of public configuration only; contains no user data."""
     return {
-        "configured": bool(settings.llm_endpoint and settings.llm_model),
-        "models": [{"id": settings.llm_model, "name": settings.llm_model}]
-        if settings.llm_model
-        else [],
+        "configured": bool(endpoint and model),
+        "models": [{"id": model, "name": model}] if model else [],
         "capabilities": {"images": "display-only", "tools": False},
     }
 
@@ -36,13 +43,14 @@ def models(*, current: Identity):
 def usage(*, current: Identity, db: Session):
     day = datetime.now(UTC).date().isoformat()
     row = db.get(Usage, (current.user.id, day))
-    settings = get_settings()
+    _, plan = policy(db, current.user.id)
+    request_limit, token_limit = limits(plan)
     return {
         "day": day,
         "requests": row.requests if row else 0,
         "reserved_tokens": row.reserved_tokens if row else 0,
-        "request_limit": settings.daily_requests,
-        "token_limit": settings.daily_token_limit,
+        "request_limit": request_limit,
+        "token_limit": token_limit,
     }
 
 
@@ -58,6 +66,9 @@ def conversations(
     query = select(Conversation).where(
         Conversation.user_id == current.user.id, Conversation.archived == archived
     )
+    threshold = cutoff(db, current.user.id)
+    if threshold is not None:
+        query = query.where(Conversation.updated_at >= threshold)
     if q:
         literal = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         pattern = f"%{literal}%"

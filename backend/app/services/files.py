@@ -9,13 +9,16 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_engine
 from app.models.entities import Attachment, User
+from app.services.retention import cutoff
 from app.services.security import Identity
+from app.services.subscriptions import policy
 
 LIMIT = 2 * 1024 * 1024
 image_gate = asyncio.Semaphore(2)
 
 
 def images(*, current: Identity, db: Session):
+    threshold = cutoff(db, current.user.id)
     rows = (
         db.execute(
             select(
@@ -25,6 +28,7 @@ def images(*, current: Identity, db: Session):
                 func.length(Attachment.data).label("size"),
             )
             .where(Attachment.user_id == current.user.id)
+            .where(Attachment.created_at >= (threshold or 0))
             .order_by(Attachment.created_at.desc())
             .limit(20)
         )
@@ -65,6 +69,16 @@ def store_image(user_id: str, data: bytes, media: str):
         user = db.scalar(select(User).where(User.id == user_id).with_for_update())
         if not user or not user.active:
             raise HTTPException(401, "Sign in to continue")
+        if not user.verified_user:
+            raise HTTPException(403, "Verify your email before uploading")
+        _, plan = policy(db, user_id, lock=True)
+        stored = db.scalar(
+            select(func.coalesce(func.sum(func.length(Attachment.data)), 0)).where(
+                Attachment.user_id == user_id
+            )
+        )
+        if stored + len(data) > plan.storage_bytes:
+            raise HTTPException(429, "Storage allowance reached; delete old files first")
         count = db.scalar(
             select(func.count()).select_from(Attachment).where(Attachment.user_id == user_id)
         )
@@ -77,8 +91,13 @@ def store_image(user_id: str, data: bytes, media: str):
 
 
 def download(*, file_id: str, current: Identity, db: Session):
+    threshold = cutoff(db, current.user.id)
     row = db.scalar(
-        select(Attachment).where(Attachment.id == file_id, Attachment.user_id == current.user.id)
+        select(Attachment).where(
+            Attachment.id == file_id,
+            Attachment.user_id == current.user.id,
+            Attachment.created_at >= (threshold or 0),
+        )
     )
     if not row:
         raise HTTPException(404, "Image not found")

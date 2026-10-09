@@ -87,6 +87,8 @@ module "secrets" {
   database_url           = module.database.connection_url
   runtime_database_url   = module.database.runtime_connection_url
   migration_principal_id = module.migration_identity.principal_id
+  email_enabled          = jsondecode(file("${path.module}/../../../../config/email.json")).enabled
+  resend_api_key         = var.resend_api_key
 }
 
 module "container_environment" {

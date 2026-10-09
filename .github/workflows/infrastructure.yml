@@ -33,6 +33,7 @@ jobs:
       TF_VAR_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
       TF_VAR_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
       TF_VAR_operator_principal_id: ${{ vars.AZURE_OPERATOR_PRINCIPAL_ID }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Load versioned budget policy

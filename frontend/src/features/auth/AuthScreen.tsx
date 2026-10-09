@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useAuth } from './AuthProvider';
 import { AppearanceControls } from '../settings/AppearanceControls';
+import { api, ApiError } from '../../shared/api';
 
 export function AuthScreen() {
   const { authenticate, error: sessionError, refresh } = useAuth();
@@ -22,10 +23,30 @@ export function AuthScreen() {
     [password, setPassword] = useState(''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
+  const [notice, setNotice] = useState(''),
+    [conflict, setConflict] = useState(false);
+  async function emailAction(transfer = false) {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const result = await api<{ message: string }>(
+        transfer ? '/auth/transfer/request' : '/auth/password/request',
+        'POST',
+        { email, ...(transfer ? { password } : {}) },
+      );
+      setNotice(result.message);
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError('');
+    setConflict(false);
     try {
       await authenticate(register ? 'register' : 'login', {
         email,
@@ -34,6 +55,7 @@ export function AuthScreen() {
       });
     } catch (failure) {
       setError((failure as Error).message);
+      setConflict(failure instanceof ApiError && failure.status === 409 && !register);
     } finally {
       setBusy(false);
     }
@@ -92,6 +114,7 @@ export function AuthScreen() {
                 </Alert>
               )}
               {error && <Alert severity="error">{error}</Alert>}
+              {notice && <Alert severity="info">{notice}</Alert>}
               {register && (
                 <TextField
                   label="Your name"
@@ -129,10 +152,22 @@ export function AuthScreen() {
               >
                 {busy ? 'Please wait…' : register ? 'Create account' : 'Sign in'}
               </Button>
-              <Typography variant="caption" color="text.secondary">
-                Email verification and password recovery are not enabled in this development
-                release.
-              </Typography>
+              {!register && (
+                <Button disabled={busy || !email.trim()} onClick={() => void emailAction()}>
+                  Forgot password?
+                </Button>
+              )}
+              {conflict && (
+                <Button disabled={busy} onClick={() => void emailAction(true)}>
+                  Email me a sign-in transfer link
+                </Button>
+              )}
+              {register && (
+                <Typography variant="caption" color="text.secondary">
+                  Your Basic account includes one active browser session. Email verification is
+                  required.
+                </Typography>
+              )}
             </Stack>
           </Paper>
         </Stack>

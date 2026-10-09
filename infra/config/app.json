@@ -6,5 +6,6 @@
   "max_output_tokens": 1024,
   "max_context_chars": 24000,
   "generation_timeout": 120,
-  "session_days": 7
+  "session_days": 7,
+  "session_idle_hours": 24
 }

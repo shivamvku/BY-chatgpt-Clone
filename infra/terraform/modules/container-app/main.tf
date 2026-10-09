@@ -28,6 +28,14 @@ resource "azurerm_container_app" "this" {
       latest_revision = true
     }
   }
+  dynamic "secret" {
+    for_each = var.resend_secret_id == "" ? [] : [var.resend_secret_id]
+    content {
+      name                = "resend-api-key"
+      identity            = var.identity_id
+      key_vault_secret_id = secret.value
+    }
+  }
   template {
     min_replicas = 0
     max_replicas = 2
@@ -46,6 +54,13 @@ resource "azurerm_container_app" "this" {
       env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
+      }
+      dynamic "env" {
+        for_each = var.resend_secret_id == "" ? [] : [var.resend_secret_id]
+        content {
+          name        = "RESEND_API_KEY"
+          secret_name = "resend-api-key"
+        }
       }
       liveness_probe {
         transport        = "HTTP"

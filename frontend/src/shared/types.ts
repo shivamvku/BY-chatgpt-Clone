@@ -6,6 +6,9 @@ export interface User {
   email: string;
   role: 'user' | 'admin';
   active: boolean;
+  verified_user: boolean;
+  bio: string;
+  timezone: string;
   appearance: Appearance;
   contrast: Contrast;
   created_at: number;
@@ -46,4 +49,20 @@ export interface Usage {
   reserved_tokens: number;
   request_limit: number;
   token_limit: number;
+}
+export interface Subscription {
+  id: string;
+  plan: string;
+  plan_name: string;
+  status: string;
+  expires_at: number | null;
+  owner: boolean;
+  seats: number;
+  members: number;
+  retention_days: number | null;
+  storage_bytes: number;
+  daily_requests: number;
+  daily_tokens: number;
+  billing_mode: string;
+  payment_collection_enabled: boolean;
 }

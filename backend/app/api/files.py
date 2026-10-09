@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.contracts import ImageView, UploadedImage
 from app.services import files as service
-from app.services.security import Identity, identity
+from app.services.security import Identity
+from app.services.security import verified_identity as identity
 
 router = APIRouter(prefix="/files", tags=["attachments"])
 

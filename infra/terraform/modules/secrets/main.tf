@@ -48,4 +48,24 @@ resource "azurerm_key_vault_secret" "runtime_database" {
   depends_on   = [azurerm_role_assignment.deploy, azurerm_role_assignment.operator]
 }
 output "runtime_database_secret_id" { value = azurerm_key_vault_secret.runtime_database.versionless_id }
+resource "azurerm_key_vault_secret" "resend" {
+  count        = var.email_enabled ? 1 : 0
+  name         = "resend-api-key"
+  value        = var.resend_api_key
+  key_vault_id = azurerm_key_vault.this.id
+  depends_on   = [azurerm_role_assignment.deploy, azurerm_role_assignment.operator]
+  lifecycle {
+    precondition {
+      condition     = length(var.resend_api_key) > 20 && startswith(var.resend_api_key, "re_")
+      error_message = "Configure the replacement Resend sending key through protected secret input."
+    }
+  }
+}
+resource "azurerm_role_assignment" "runtime_email" {
+  count                = var.email_enabled ? 1 : 0
+  scope                = "${azurerm_key_vault.this.id}/secrets/resend-api-key"
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = var.runtime_principal_id
+}
+output "resend_secret_id" { value = var.email_enabled ? azurerm_key_vault_secret.resend[0].versionless_id : "" }
 

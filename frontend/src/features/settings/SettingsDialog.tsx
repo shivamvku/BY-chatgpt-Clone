@@ -18,6 +18,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { useAppearance } from '../../theme/AppearanceProvider';
 import { AppearanceControls } from './AppearanceControls';
 import { AdminPanel } from '../admin/AdminPanel';
+import { SubscriptionPanel } from './SubscriptionPanel';
+import { PasswordSettings } from './PasswordSettings';
 
 export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, updateUser, logout } = useAuth(),
@@ -27,6 +29,8 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false);
+  const [bio, setBio] = useState(user?.bio || ''),
+    [timezone, setTimezone] = useState(user?.timezone || 'UTC');
   const usage = useQuery({
     queryKey: ['usage'],
     queryFn: () => api<Usage>('/usage'),
@@ -35,7 +39,15 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
   const sessions = useQuery({
     queryKey: ['sessions'],
     queryFn: () =>
-      api<{ created_at: number; expires_at: number; current: boolean }[]>('/auth/sessions'),
+      api<
+        {
+          created_at: number;
+          expires_at: number;
+          current: boolean;
+          source: string;
+          last_active_at: number;
+        }[]
+      >('/auth/sessions'),
     enabled: open,
   });
   const images = useQuery({
@@ -59,6 +71,8 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
       updateUser(
         await api<User>('/auth/profile', 'PATCH', {
           name,
+          bio,
+          timezone,
           appearance: appearance.appearance,
           contrast: appearance.contrast,
         }),
@@ -102,9 +116,26 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
             {user?.email} · {user?.role}
           </Typography>
           <AppearanceControls />
+          <TextField
+            label="Bio"
+            multiline
+            maxRows={4}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            inputProps={{ maxLength: 500 }}
+          />
+          <TextField
+            label="Timezone"
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            helperText="For example: Asia/Kolkata or UTC"
+            inputProps={{ maxLength: 80 }}
+          />
           <Button variant="contained" disabled={busy || !name.trim()} onClick={() => void save()}>
             Save profile and appearance
           </Button>
+          <Divider />
+          <SubscriptionPanel />
           <Divider />
           <Typography fontWeight={700}>Daily AI allowance</Typography>
           {usage.data && (
@@ -135,7 +166,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
           <Typography fontWeight={700}>Sessions</Typography>
           {sessions.data?.map((session, index) => (
             <Typography variant="body2" key={index}>
-              {session.current ? 'This session' : 'Other session'} · expires{' '}
+              {session.current ? 'This session' : 'Other session'} · {session.source} · expires{' '}
               {new Date(session.expires_at * 1000).toLocaleDateString()}
             </Typography>
           ))}
@@ -147,9 +178,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               Sign out all devices
             </Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Password recovery and email verification are pending email-provider integration.
-          </Typography>
+          <PasswordSettings />
           {user?.role === 'admin' && (
             <>
               <Divider />

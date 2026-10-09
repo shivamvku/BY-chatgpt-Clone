@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models.entities import LoginSession, RateBucket, User, now
+from app.models.entities import Audit, LoginSession, RateBucket, User, now
 
 hasher = PasswordHasher()
 dummy_hash = hasher.hash(secrets.token_urlsafe(32))
@@ -68,17 +68,32 @@ def identity(request: Request, db: Session = Depends(get_db)) -> Identity:
     token = request.cookies.get(get_settings().session_cookie, "")
     session = db.get(LoginSession, digest(token)) if token else None
     user = db.get(User, session.user_id) if session else None
-    if not session or session.expires_at <= now() or not user or not user.active:
+    if (
+        not session
+        or session.expires_at <= now()
+        or not user
+        or not user.active
+        or session.last_active_at <= now() - get_settings().session_idle_hours * 3600
+    ):
         raise HTTPException(401, "Sign in to continue")
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         mutation_guard(request)
         if not secrets.compare_digest(session.csrf_hash, digest(request.headers["x-csrf-token"])):
             raise HTTPException(403, "Session CSRF validation failed")
+    if session.last_active_at < now() - 300:
+        session.last_active_at = now()
+        db.commit()
     return Identity(user, session)
 
 
+def verified_identity(current: Identity = Depends(identity)) -> Identity:
+    if not current.user.verified_user:
+        raise HTTPException(403, "Verify your email before using chat or files")
+    return current
+
+
 def admin(current: Identity = Depends(identity)) -> Identity:
-    if current.user.role != "admin":
+    if current.user.role != "admin" or not current.user.verified_user:
         raise HTTPException(403, "Administrator access required")
     return current
 
@@ -95,25 +110,71 @@ def csrf_cookie(response: Response, value: str):
     )
 
 
-def new_session(db: Session, user: User, response: Response) -> str:
+def session_source(request: Request) -> str:
+    agent = request.headers.get("user-agent", "")[:1000].lower()
+    browser = next(
+        (
+            name
+            for marker, name in (
+                ("edg", "Edge"),
+                ("firefox", "Firefox"),
+                ("chrome", "Chrome"),
+                ("safari", "Safari"),
+            )
+            if marker in agent
+        ),
+        "Browser",
+    )
+    system = next(
+        (
+            name
+            for marker, name in (
+                ("android", "Android"),
+                ("iphone", "iPhone"),
+                ("ipad", "iPad"),
+                ("windows", "Windows"),
+                ("macintosh", "macOS"),
+                ("linux", "Linux"),
+            )
+            if marker in agent
+        ),
+        "Unknown device",
+    )
+    return f"{browser} / {system}"
+
+
+def new_session(db: Session, user: User, response: Response, request: Request) -> str:
     settings = get_settings()
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
-    db.execute(delete(LoginSession).where(LoginSession.expires_at < now()))
+    db.execute(
+        delete(LoginSession).where(
+            LoginSession.user_id == user.id,
+            (LoginSession.expires_at <= now())
+            | (LoginSession.last_active_at <= now() - settings.session_idle_hours * 3600),
+        )
+    )
     sessions = db.scalars(
         select(LoginSession)
         .where(LoginSession.user_id == user.id)
         .order_by(LoginSession.created_at.desc())
     ).all()
-    for old in sessions[9:]:
-        db.delete(old)
+    if sessions:
+        row = sessions[0]
+        raise HTTPException(
+            409,
+            f"You are already signed in on {row.source}. "
+            "Request an email sign-in transfer to continue here.",
+        )
     db.add(
         LoginSession(
             token_hash=digest(token),
             user_id=user.id,
             csrf_hash=digest(csrf),
             expires_at=now() + settings.session_days * 86400,
+            source=session_source(request),
         )
     )
+    db.add(Audit(actor_id=user.id, target_id=user.id, action="account.signed_in"))
     db.commit()
     response.set_cookie(
         settings.session_cookie,

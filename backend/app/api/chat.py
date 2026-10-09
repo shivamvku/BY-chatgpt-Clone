@@ -14,7 +14,8 @@ from app.schemas.contracts import (
     UsageView,
 )
 from app.services import chat as service
-from app.services.security import Identity, identity
+from app.services.security import Identity
+from app.services.security import verified_identity as identity
 
 router = APIRouter(tags=["chat"])
 

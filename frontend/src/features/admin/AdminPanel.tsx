@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography, MenuItem, TextField } from '@mui/material';
 import { api } from '../../shared/api';
 import type { User } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
+import { PlanPanel } from './PlanPanel';
 export function AdminPanel() {
   const { user } = useAuth(),
     queries = useQueryClient(),
@@ -30,6 +31,18 @@ export function AdminPanel() {
       setBusy(false);
     }
   }
+  async function assign(id: string, plan: string) {
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/admin/users/${id}/subscription`, 'PATCH', { plan, status: 'active' });
+      await queries.invalidateQueries({ queryKey: ['subscription'] });
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <Stack gap={2}>
       <Typography fontWeight={700}>User administration</Typography>
@@ -40,6 +53,7 @@ export function AdminPanel() {
         <Box key={row.id}>
           <Typography variant="body2">
             {row.name} · {row.email}
+            {row.verified_user ? ' · Verified' : ' · Unverified'}
           </Typography>
           <Stack direction="row" gap={1}>
             <Button
@@ -62,6 +76,19 @@ export function AdminPanel() {
               {row.active ? 'Disable' : 'Enable'}
             </Button>
           </Stack>
+          <TextField
+            select
+            size="small"
+            label={`Assign plan for ${row.name}`}
+            value=""
+            disabled={busy}
+            onChange={(e) => void assign(row.id, e.target.value)}
+            sx={{ mt: 1, minWidth: 200 }}
+          >
+            <MenuItem value="basic">Basic</MenuItem>
+            <MenuItem value="pro">Pro</MenuItem>
+            <MenuItem value="pro_max">Pro Max</MenuItem>
+          </TextField>
         </Box>
       ))}
       <Stack direction="row">
@@ -75,6 +102,7 @@ export function AdminPanel() {
           Next page
         </Button>
       </Stack>
+      <PlanPanel />
     </Stack>
   );
 }

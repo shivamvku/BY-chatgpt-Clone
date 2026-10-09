@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     frontend_directory: Path = Path("/app/frontend/dist")
     allowed_origins: str = "http://localhost:5173,http://localhost:8000"
     session_days: int = Field(7, ge=1, le=30)
+    session_idle_hours: int = Field(24, ge=1, le=168)
+    public_url: str = "http://localhost:8005"
+    resend_api_key: str = ""
+    email_from: str = ""
     llm_endpoint: str = ""
     llm_model: str = ""
     llm_api_key: str = ""

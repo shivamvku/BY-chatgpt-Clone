@@ -7,14 +7,19 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.entities import Conversation, Message, RateBucket, Usage, User, now
+from app.models.entities import Conversation, Message, RateBucket, Usage, UsageEvent, User, now
+from app.services.retention import cutoff
 from app.services.security import digest
+from app.services.subscriptions import limits, policy
 
 
 def owned(db: Session, user_id: str, conversation_id: str, lock: bool = False) -> Conversation:
     query = select(Conversation).where(
         Conversation.id == conversation_id, Conversation.user_id == user_id
     )
+    threshold = cutoff(db, user_id)
+    if threshold is not None:
+        query = query.where(Conversation.updated_at >= threshold)
     if lock:
         query = query.with_for_update()
     row = db.scalar(query)
@@ -74,6 +79,10 @@ def prepare_generation(
     user = db.scalar(select(User).where(User.id == user_id).with_for_update())
     if not user or not user.active:
         raise HTTPException(401, "Sign in to continue")
+    if not user.verified_user:
+        raise HTTPException(403, "Verify your email before using chat")
+    subscription, plan = policy(db, user_id, lock=True)
+    request_limit, token_limit = limits(plan)
     conversation = owned(db, user_id, conversation_id, lock=True)
     ordinal = (
         db.scalar(
@@ -168,9 +177,7 @@ def prepare_generation(
     if not usage:
         usage = Usage(user_id=user_id, day=day, requests=0, reserved_tokens=0)
         db.add(usage)
-    if usage.requests >= settings.daily_requests or (
-        usage.reserved_tokens + reserve > settings.daily_token_limit
-    ):
+    if usage.requests >= request_limit or (usage.reserved_tokens + reserve > token_limit):
         raise HTTPException(429, "Daily AI allowance reached; try again tomorrow")
     usage.requests += 1
     usage.reserved_tokens += reserve
@@ -184,6 +191,27 @@ def prepare_generation(
         model=settings.llm_model,
     )
     db.add(answer)
+    db.flush()
+    shared_reserved = db.scalar(
+        select(func.coalesce(func.sum(UsageEvent.reserved_tokens), 0)).where(
+            UsageEvent.subscription_id == subscription.id,
+            UsageEvent.created_at
+            >= int(
+                datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+            ),
+        )
+    )
+    if shared_reserved + reserve > token_limit:
+        raise HTTPException(429, "Your subscription's shared daily allowance is reached")
+    db.add(
+        UsageEvent(
+            id=answer.id,
+            user_id=user_id,
+            subscription_id=subscription.id,
+            model=settings.llm_model,
+            reserved_tokens=reserve,
+        )
+    )
     conversation.updated_at = now()
     db.commit()
     return answer

@@ -32,6 +32,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(Text)
     role: Mapped[str] = mapped_column(String(16), default="user")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    verified_user: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verified_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bio: Mapped[str] = mapped_column(String(500), default="")
+    timezone: Mapped[str] = mapped_column(String(80), default="UTC")
     appearance: Mapped[str] = mapped_column(String(16), default="system")
     contrast: Mapped[str] = mapped_column(String(16), default="standard")
     created_at: Mapped[int] = mapped_column(Integer, default=now)
@@ -44,6 +48,9 @@ class LoginSession(Base):
     csrf_hash: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[int] = mapped_column(Integer, default=now)
     expires_at: Mapped[int] = mapped_column(Integer, index=True)
+    last_active_at: Mapped[int] = mapped_column(Integer, default=now)
+    source: Mapped[str] = mapped_column(String(120), default="Unknown browser")
+    __table_args__ = (Index("ix_single_user_session", "user_id", unique=True),)
 
 
 class RateBucket(Base):
@@ -112,3 +119,59 @@ class Audit(Base):
     target_id: Mapped[str] = mapped_column(String(36))
     action: Mapped[str] = mapped_column(String(60))
     created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class AccountToken(Base):
+    __tablename__ = "account_tokens"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(20))
+    expires_at: Mapped[int] = mapped_column(Integer, index=True)
+
+
+class Plan(Base):
+    __tablename__ = "plans"
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    name: Mapped[str] = mapped_column(String(40))
+    seats: Mapped[int] = mapped_column(Integer)
+    daily_requests: Mapped[int] = mapped_column(Integer)
+    daily_tokens: Mapped[int] = mapped_column(Integer)
+    retention_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_bytes: Mapped[int] = mapped_column(Integer)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("plans.id"))
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    expires_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, default=now)
+
+
+class Membership(Base):
+    __tablename__ = "memberships"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    subscription_id: Mapped[str] = mapped_column(ForeignKey("subscriptions.id"), index=True)
+
+
+class UsageEvent(Base):
+    __tablename__ = "usage_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    subscription_id: Mapped[str] = mapped_column(ForeignKey("subscriptions.id"), index=True)
+    model: Mapped[str] = mapped_column(String(120))
+    reserved_tokens: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    created_at: Mapped[int] = mapped_column(Integer, default=now, index=True)
+
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subscription_id: Mapped[str] = mapped_column(ForeignKey("subscriptions.id"), index=True)
+    email: Mapped[str] = mapped_column(String(254))
+    expires_at: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16), default="pending")

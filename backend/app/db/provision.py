@@ -49,10 +49,17 @@ def provision_runtime():
             "usage",
             "attachments",
             "audit_events",
+            "account_tokens",
+            "plans",
+            "subscriptions",
+            "memberships",
+            "usage_events",
+            "invitations",
         ):
             connection.execute(
                 text(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO chat_runtime")
             )
+        connection.execute(text("REVOKE UPDATE, DELETE ON audit_events FROM chat_runtime"))
 
 
 if __name__ == "__main__":

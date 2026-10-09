@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { verifyEmail } from './account-email';
 test('register, save appearance, reload and revoke sessions', async ({ page }) => {
   await page.goto('/');
   await page.screenshot({
@@ -13,6 +14,7 @@ test('register, save appearance, reload and revoke sessions', async ({ page }) =
     .fill(`browser-${Date.now()}-${test.info().project.name}@example.com`);
   await page.getByLabel(/^Password/).fill('browser-password-123');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await verifyEmail(page);
   await expect(page.getByRole('heading', { name: 'What will you explore today?' })).toBeVisible();
   await page.screenshot({
     path: `../.codex-tmp/younderchat-workspace-${test.info().project.name}.png`,

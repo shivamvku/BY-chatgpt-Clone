@@ -1,5 +1,6 @@
 import re
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -29,9 +30,21 @@ class Registration(Credentials):
 
 
 class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=80)
     appearance: Literal["light", "dark", "system"] = "system"
     contrast: Literal["standard", "high"] = "standard"
+    bio: str = Field(default="", max_length=500)
+    timezone: str = Field(default="UTC", max_length=80)
+
+    @field_validator("timezone")
+    @classmethod
+    def valid_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Choose a valid timezone") from None
+        return value
 
     @field_validator("name")
     @classmethod
@@ -48,6 +61,9 @@ class UserView(BaseModel):
     name: str
     role: str
     active: bool
+    verified_user: bool
+    bio: str
+    timezone: str
     appearance: str
     contrast: str
     created_at: int
@@ -107,6 +123,8 @@ class SessionView(BaseModel):
     created_at: int
     expires_at: int
     current: bool
+    source: str
+    last_active_at: int
 
 
 class ConversationPage(BaseModel):

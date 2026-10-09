@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_engine
-from app.models.entities import Conversation, Message, now
+from app.models.entities import Conversation, Message, UsageEvent, now
 from app.services import provider
 from app.services.conversations import context_messages, owned
 
@@ -41,6 +41,9 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         row.content = content
         row.updated_at = now()
         row.status = "stopped" if stopping else status
+        usage = db.get(UsageEvent, message_id)
+        if usage:
+            usage.status = row.status
         conversation = db.get(Conversation, row.conversation_id)
         if conversation:
             conversation.updated_at = now()

@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function accept(state: AuthState) {
     setCsrf(state.csrf);
     setUser(state.user);
+    if (!state.user) queries.clear();
     if (state.user)
       setPreferences({
         appearance: state.user.appearance,

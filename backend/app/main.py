@@ -10,7 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse, Response
 from starlette.types import Scope
 
-from app.api import admin, auth, chat, files
+from app.api import admin, auth, chat, files, subscriptions
 from app.api.health import router
 from app.core.config import get_settings
 
@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json" if settings.app_env == "development" else None,
     )
     app.include_router(router, prefix="/api")
-    for module in (auth, admin, chat, files):
+    for module in (auth, admin, chat, files, subscriptions):
         app.include_router(module.router, prefix="/api")
 
     @app.exception_handler(SQLAlchemyError)

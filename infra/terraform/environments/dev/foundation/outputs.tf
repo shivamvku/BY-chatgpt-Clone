@@ -9,6 +9,7 @@ output "application" {
     registry_server            = module.registry.login_server
     database_secret_id         = module.secrets.database_secret_id
     runtime_database_secret_id = module.secrets.runtime_database_secret_id
+    resend_secret_id           = module.secrets.resend_secret_id
     migration_identity_id      = module.migration_identity.id
     azure_client_id            = module.identity.client_id
     llm_endpoint               = local.ai.enabled ? "${azurerm_cognitive_account.ai[0].endpoint}openai/v1" : ""
