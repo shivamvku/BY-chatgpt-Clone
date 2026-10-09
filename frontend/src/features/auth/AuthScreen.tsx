@@ -12,7 +12,6 @@ import {
   Typography,
 } from '@mui/material';
 import { useAuth } from './AuthProvider';
-import { AppearanceControls } from '../settings/AppearanceControls';
 import { api, ApiError } from '../../shared/api';
 
 export function AuthScreen() {
@@ -83,9 +82,6 @@ export function AuthScreen() {
               One thoughtful conversation at a time. Your ideas, your history, your space to
               explore.
             </Typography>
-            <Box mt={4}>
-              <AppearanceControls />
-            </Box>
           </Box>
           <Paper variant="outlined" sx={{ p: { xs: 3, md: 4 }, width: '100%', maxWidth: 440 }}>
             <Typography variant="h5" fontWeight={700}>

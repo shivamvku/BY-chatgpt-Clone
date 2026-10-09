@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Stack, TextField } from '@mui/material';
 import { api } from '../../shared/api';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -23,7 +23,6 @@ export function PasswordSettings() {
   }
   return (
     <Stack spacing={2}>
-      <Typography fontWeight={700}>Change password</Typography>
       {error && <Alert severity="error">{error}</Alert>}
       <TextField
         label="Current password"

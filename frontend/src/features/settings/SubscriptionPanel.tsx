@@ -17,17 +17,12 @@ export function SubscriptionPanel() {
     queryKey: ['subscription'],
     queryFn: () => api<Subscription>('/subscription'),
   });
-  const events = useQuery({
-    queryKey: ['usage-events'],
-    queryFn: () => api<UsageEvent[]>('/usage/events'),
-  });
   if (subscription.isPending) return <LinearProgress aria-label="Loading subscription" />;
   if (subscription.isError) return <Alert severity="error">{subscription.error.message}</Alert>;
   const data = subscription.data;
   return (
     <Stack spacing={2}>
-      <Typography fontWeight={700}>Plan and billing</Typography>
-      <Stack direction="row" gap={1}>
+      <Stack direction="row" gap={1} flexWrap="wrap">
         <Chip label={data.plan_name} color="primary" />
         <Chip label={data.status} />
       </Stack>
@@ -51,14 +46,26 @@ export function SubscriptionPanel() {
         enabled.
       </Alert>
       {data.owner && data.seats > 1 && <SeatPanel />}
-      <Typography fontWeight={700}>Recent AI usage</Typography>
-      {events.isError && <Alert severity="error">{events.error.message}</Alert>}
-      {events.data?.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          No AI requests yet.
-        </Typography>
-      )}
-      {events.data?.slice(0, 10).map((event) => (
+    </Stack>
+  );
+}
+
+export function UsageEventsPanel() {
+  const events = useQuery({
+    queryKey: ['usage-events'],
+    queryFn: () => api<UsageEvent[]>('/usage/events'),
+  });
+  if (events.isPending) return <LinearProgress aria-label="Loading usage" />;
+  if (events.isError) return <Alert severity="error">{events.error.message}</Alert>;
+  if (events.data.length === 0)
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No AI requests yet.
+      </Typography>
+    );
+  return (
+    <Stack spacing={1}>
+      {events.data.slice(0, 10).map((event) => (
         <Typography key={event.id} variant="body2">
           {new Date(event.created_at * 1000).toLocaleString()} · {event.model} ·{' '}
           {event.reserved_tokens.toLocaleString()} reserved tokens · {event.status}
