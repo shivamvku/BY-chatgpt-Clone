@@ -1,8 +1,8 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { CircularProgress, Stack } from '@mui/material';
 import { useAuth } from '../features/auth/AuthProvider';
 import { AuthScreen } from '../features/auth/AuthScreen';
-import { AccountAction, initialAccountLink } from '../features/auth/AccountAction';
+import { AccountAction, initialAccountLink, readAccountLink } from '../features/auth/AccountAction';
 import { VerificationScreen } from '../features/auth/VerificationScreen';
 const ChatWorkspace = lazy(() => import('../features/chat/ChatWorkspace'));
 function Loading() {
@@ -15,6 +15,12 @@ function Loading() {
 export function App() {
   const auth = useAuth();
   const [link, setLink] = useState(initialAccountLink);
+  useEffect(() => {
+    // Account links may arrive while the app is already open (hash-only navigation).
+    const syncLink = () => setLink(readAccountLink());
+    window.addEventListener('hashchange', syncLink);
+    return () => window.removeEventListener('hashchange', syncLink);
+  }, []);
   if (auth.loading) return <Loading />;
   if (link) return <AccountAction link={link} onClose={() => setLink(null)} />;
   if (auth.user && !auth.user.verified_user) return <VerificationScreen />;
