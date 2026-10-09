@@ -1,5 +1,5 @@
 import { useDeferredValue, useState } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Box,
@@ -7,6 +7,7 @@ import {
   Divider,
   IconButton,
   InputAdornment,
+  LinearProgress,
   List,
   ListItem,
   ListItemButton,
@@ -16,14 +17,16 @@ import {
   Skeleton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Search from '@mui/icons-material/Search';
 import MoreHoriz from '@mui/icons-material/MoreHoriz';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
 import { api } from '../../shared/api';
-import type { Conversation, Page } from '../../shared/types';
+import type { Conversation, Page, Usage } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 
 export function History({
@@ -32,6 +35,7 @@ export function History({
   onSelect,
   onNew,
   onSettings,
+  onAdmin,
   onAction,
 }: {
   active: string | null;
@@ -39,6 +43,7 @@ export function History({
   onSelect: (id: string) => void;
   onNew: () => void;
   onSettings: () => void;
+  onAdmin: () => void;
   onAction: (row: Conversation, action: string) => void;
 }) {
   const { user } = useAuth(),
@@ -50,6 +55,17 @@ export function History({
       row: Conversation;
     } | null>(null);
   const deferredSearch = useDeferredValue(search);
+  const usage = useQuery({
+    queryKey: ['usage'],
+    queryFn: () => api<Usage>('/usage'),
+    refetchInterval: 60000,
+  });
+  const requestPct = usage.data
+    ? Math.min(100, Math.round((usage.data.requests / Math.max(1, usage.data.request_limit)) * 100))
+    : 0;
+  const tokenPct = usage.data
+    ? Math.min(100, Math.round((usage.data.reserved_tokens / Math.max(1, usage.data.token_limit)) * 100))
+    : 0;
   const history = useInfiniteQuery({
     queryKey: ['history', deferredSearch, archived],
     initialPageParam: '',
@@ -159,6 +175,33 @@ export function History({
         )}
       </Box>
       <Divider />
+      {usage.data && (
+        <Tooltip
+          title={`${usage.data.requests} / ${usage.data.request_limit} requests · ${Math.round(usage.data.reserved_tokens / 1000)}k / ${Math.round(usage.data.token_limit / 1000)}k tokens today`}
+          placement="top"
+        >
+          <Box sx={{ px: 1, pb: 0.5 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.25}>
+              <Typography variant="caption" color="text.secondary">
+                Daily usage
+              </Typography>
+              <Typography
+                variant="caption"
+                color={requestPct >= 90 ? 'error' : tokenPct >= 90 ? 'warning.main' : 'text.secondary'}
+                fontWeight={600}
+              >
+                {Math.max(requestPct, tokenPct)}%
+              </Typography>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              value={Math.max(requestPct, tokenPct)}
+              color={Math.max(requestPct, tokenPct) >= 90 ? 'error' : 'primary'}
+              sx={{ height: 3, borderRadius: 2 }}
+            />
+          </Box>
+        </Tooltip>
+      )}
       <Button
         startIcon={<SettingsOutlined />}
         onClick={onSettings}
@@ -166,6 +209,15 @@ export function History({
       >
         {user?.name}
       </Button>
+      {user?.role === 'admin' && (
+        <Button
+          startIcon={<AdminPanelSettingsOutlined />}
+          onClick={onAdmin}
+          sx={{ justifyContent: 'flex-start' }}
+        >
+          Admin
+        </Button>
+      )}
       <Menu open={!!menu} anchorEl={menu?.element} onClose={() => setMenu(null)}>
         {[
           'Rename',

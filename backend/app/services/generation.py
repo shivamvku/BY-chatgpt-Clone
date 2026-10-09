@@ -28,8 +28,15 @@ def claim(user_id: str, message_id: str) -> tuple[list[dict[str, str]], str]:
         if changed.rowcount != 1:
             raise HTTPException(409, "Response was already started; reload conversation")
         messages = context_messages(db, row.conversation_id, row.parent_id)
+        # Resolve "auto" to a real model using the user's plan
+        model_id = row.model
+        if model_id == "auto":
+            from app.services.provider import resolve_auto
+            from app.services.subscriptions import policy
+            _, plan = policy(db, user_id)
+            model_id = resolve_auto(plan.id)
         db.commit()
-        return messages, row.model
+        return messages, model_id
 
 
 def persist(message_id: str, content: str, status: str = "streaming") -> bool:

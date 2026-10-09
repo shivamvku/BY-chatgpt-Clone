@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     email_from: str = ""
     gemini_api_key: str = ""
     groq_api_key: str = ""
+    # NOTE: GEMINI_MODEL and GROQ_MODEL environment variables are no longer read.
+    # The model catalogue in app/services/provider.py owns all model IDs and their
+    # API names. Any GEMINI_MODEL= or GROQ_MODEL= lines in .env are silently ignored.
     daily_requests: int = Field(30, ge=0, le=1000)
     daily_token_limit: int = Field(40000, ge=0, le=1000000)
     global_daily_token_limit: int = Field(100000, ge=0, le=1000000)

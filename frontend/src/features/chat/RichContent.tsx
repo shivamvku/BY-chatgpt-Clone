@@ -102,6 +102,8 @@ export const RichContent = memo(function RichContent({
         '& p': { mt: 1.5, mb: 0 },
         '& pre': {
           overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          maxWidth: '100%',
           p: 2,
           borderRadius: '0 0 8px 8px',
           bgcolor: 'action.hover',

@@ -25,13 +25,11 @@ import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
 import WorkspacePremiumOutlined from '@mui/icons-material/WorkspacePremiumOutlined';
 import StorageOutlined from '@mui/icons-material/StorageOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
-import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
 import { api } from '../../shared/api';
 import type { Subscription, Usage, User } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 import { useAppearance } from '../../theme/AppearanceProvider';
 import { AppearanceControls } from './AppearanceControls';
-import { AdminPanel } from '../admin/AdminPanel';
 import { SubscriptionPanel, UsageEventsPanel } from './SubscriptionPanel';
 import { PasswordSettings } from './PasswordSettings';
 import { SectionCard, SettingRow } from './SectionCard';
@@ -372,7 +370,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
   const queries = useQueryClient();
   const [section, setSection] = useState<SectionId>('general');
   const [signingOut, setSigningOut] = useState(false);
-  const isAdmin = user?.role === 'admin';
   const subscription = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api<Subscription>('/subscription'),
@@ -409,16 +406,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
       hint: 'Sessions, devices, and password.',
       icon: <LockOutlined fontSize="small" />,
     },
-    ...(isAdmin
-      ? [
-          {
-            id: 'admin' as SectionId,
-            label: 'Admin',
-            hint: 'Manage people, plans, and access.',
-            icon: <AdminPanelSettingsOutlined fontSize="small" />,
-          },
-        ]
-      : []),
   ];
   const active = nav.find((item) => item.id === section) ?? nav[0];
   const initials = (user?.name || '?')
@@ -579,14 +566,6 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               {section === 'data' && <DataSection />}
               {section === 'security' && (
                 <SecuritySection signOut={(all) => void signOut(all)} busy={signingOut} />
-              )}
-              {section === 'admin' && isAdmin && (
-                <SectionCard
-                  title="User administration"
-                  description="Roles, access, and plan assignment."
-                >
-                  <AdminPanel />
-                </SectionCard>
               )}
             </Stack>
           </Box>

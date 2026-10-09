@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+
 # Import lazily to avoid circular imports at module load time.
 def _valid_model_ids() -> set[str]:
     from app.services import provider  # noqa: PLC0415
@@ -115,7 +116,9 @@ class SendMessage(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
     parent_id: str | None = None
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="auto", max_length=80)
+    # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
+    # so old clients/stored data continue to resolve correctly.
+    model: str = Field(default="gemini-3.5-flash", max_length=80)
 
     @field_validator("model")
     @classmethod
@@ -127,7 +130,9 @@ class SendMessage(BaseModel):
 
 class Regenerate(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="auto", max_length=80)
+    # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
+    # so old clients/stored data continue to resolve correctly.
+    model: str = Field(default="gemini-3.5-flash", max_length=80)
 
     @field_validator("model")
     @classmethod
