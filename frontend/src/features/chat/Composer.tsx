@@ -3,7 +3,9 @@ import type { FormEvent } from 'react';
 import {
   Alert,
   Box,
+  Divider,
   IconButton,
+  ListSubheader,
   MenuItem,
   Paper,
   Select,
@@ -17,6 +19,7 @@ import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import MicNoneOutlined from '@mui/icons-material/MicNoneOutlined';
 import StopRounded from '@mui/icons-material/StopRounded';
 import { request } from '../../shared/api';
+import type { ModelChoice } from '../../shared/types';
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -42,7 +45,7 @@ export function Composer({
   busy: boolean;
   canStop: boolean;
   enabled: boolean;
-  models: { id: string; name: string; available: boolean }[];
+  models: ModelChoice[];
   model: string;
   onModelChange: (model: string) => void;
   onSend: (content: string) => Promise<boolean>;
@@ -140,8 +143,17 @@ export function Composer({
               void submit();
             }
           }}
-          sx={{ '& fieldset': { border: 0 }, '& .MuiInputBase-root': { p: 0.75 } }}
+          sx={{ '& fieldset': { border: 0 }, '& .MuiInputBase-root': { p: 0.75 }, '& textarea::placeholder': { color: 'text.secondary', opacity: 0.7 } }}
         />
+        {text.length > 0 && (
+          <Typography
+            variant="caption"
+            color={text.length > 10000 ? 'error' : 'text.secondary'}
+            sx={{ alignSelf: 'flex-end', px: 1, display: 'block', textAlign: 'right' }}
+          >
+            {text.length.toLocaleString()} / 12,000
+          </Typography>
+        )}
         <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
           <Stack direction="row" alignItems="center" gap={0.5}>
             <Tooltip title="Add image">
@@ -180,14 +192,47 @@ export function Composer({
               disabled={busy}
               onChange={(event) => onModelChange(event.target.value)}
               inputProps={{ 'aria-label': 'AI model' }}
-              sx={{ minWidth: 170 }}
+              sx={{ minWidth: 200 }}
             >
-              {models.map((item) => (
-                <MenuItem key={item.id} value={item.id} disabled={!item.available}>
-                  {item.name}
-                  {!item.available ? ' (unavailable)' : ''}
-                </MenuItem>
-              ))}
+              {/* Auto always first */}
+              {models
+                .filter((m) => m.id === 'auto')
+                .map((m) => (
+                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
+                    {m.name}
+                  </MenuItem>
+                ))}
+              {/* Gemini group */}
+              {models.some((m) => m.id !== 'auto' && m.name.toLowerCase().includes('gemini')) && (
+                <ListSubheader disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
+                  Gemini
+                </ListSubheader>
+              )}
+              {models
+                .filter((m) => m.id !== 'auto' && m.name.toLowerCase().includes('gemini'))
+                .map((m) => (
+                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
+                    {m.name}
+                    {!m.available ? ' (unavailable)' : ''}
+                  </MenuItem>
+                ))}
+              {/* Groq group */}
+              {models.some((m) => m.name.toLowerCase().includes('groq')) && (
+                [
+                  <Divider key="groq-divider" />,
+                  <ListSubheader key="groq-header" disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
+                    Groq
+                  </ListSubheader>,
+                ]
+              )}
+              {models
+                .filter((m) => m.name.toLowerCase().includes('groq'))
+                .map((m) => (
+                  <MenuItem key={m.id} value={m.id} disabled={!m.available}>
+                    {m.name.replace('Groq · ', '')}
+                    {!m.available ? ' (unavailable)' : ''}
+                  </MenuItem>
+                ))}
             </Select>
           </Stack>
           {busy ? (

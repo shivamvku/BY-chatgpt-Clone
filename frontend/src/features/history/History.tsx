@@ -13,6 +13,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -68,7 +69,7 @@ export function History({
       </Button>
       <TextField
         size="small"
-        label="Search conversations"
+        placeholder="Search conversations"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         InputProps={{
@@ -95,6 +96,13 @@ export function History({
           </Alert>
         )}
         <List dense>
+          {history.isPending && (
+            <Stack gap={1} px={1}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} variant="text" height={40} />
+              ))}
+            </Stack>
+          )}
           {history.data?.pages
             .flatMap((page) => page.items)
             .map((row) => (
@@ -102,20 +110,34 @@ export function History({
                 key={row.id}
                 disablePadding
                 secondaryAction={
-                  <IconButton
-                    aria-label={`Actions for ${row.title}`}
-                    disabled={disabled}
-                    onClick={(event) => setMenu({ element: event.currentTarget, row })}
-                  >
-                    <MoreHoriz />
-                  </IconButton>
+                  <span className="action-btn">
+                    <IconButton
+                      aria-label={`Actions for ${row.title}`}
+                      disabled={disabled}
+                      onClick={(event) => setMenu({ element: event.currentTarget, row })}
+                    >
+                      <MoreHoriz />
+                    </IconButton>
+                  </span>
                 }
+                sx={{
+                  '& .action-btn': { opacity: 0, transition: 'opacity 0.15s' },
+                  '&:hover .action-btn, &:focus-within .action-btn': { opacity: 1 },
+                }}
               >
                 <ListItemButton
                   selected={active === row.id}
                   disabled={disabled}
                   onClick={() => onSelect(row.id)}
-                  sx={{ borderRadius: 2, pr: 5 }}
+                  sx={{
+                    borderRadius: 2,
+                    pr: 5,
+                    '&.Mui-selected': {
+                      borderLeft: '3px solid',
+                      borderColor: 'primary.main',
+                      pl: 1.625,
+                    },
+                  }}
                 >
                   <ListItemText primary={row.title} primaryTypographyProps={{ noWrap: true }} />
                 </ListItemButton>

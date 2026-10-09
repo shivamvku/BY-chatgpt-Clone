@@ -56,7 +56,7 @@ export function MessageCard({
         >
           {message.role === 'assistant' ? 'YounderChat' : 'You'}
         </Typography>
-        {message.status !== 'complete' && (
+        {message.status !== 'complete' && message.status !== 'streaming' && (
           <Chip
             size="small"
             label={message.status}
@@ -64,12 +64,28 @@ export function MessageCard({
           />
         )}
       </Stack>
-      <Box sx={message.role === 'user' ? { bgcolor: 'action.hover', p: 2, borderRadius: 3 } : {}}>
-        <RichContent
-          content={message.content || (message.status === 'streaming' ? 'Thinking…' : '')}
-        />
+      <Box sx={message.role === 'user' ? { display: 'flex', justifyContent: 'flex-end' } : {}}>
+        <Box
+          sx={
+            message.role === 'user'
+              ? { bgcolor: 'action.hover', p: 2, borderRadius: 3, maxWidth: '85%' }
+              : {}
+          }
+        >
+          <RichContent
+            content={message.content || (message.status === 'streaming' ? 'Thinking…' : '')}
+            streaming={message.status === 'streaming'}
+          />
+        </Box>
       </Box>
-      <Stack direction="row" alignItems="center" gap={0.5} mt={0.5}>
+      <Box
+        sx={{
+          opacity: active || message.status === 'failed' ? 1 : 0,
+          transition: 'opacity 0.15s',
+          '.MuiBox-root:hover &, &:focus-within': { opacity: 1 },
+        }}
+      >
+        <Stack direction="row" alignItems="center" gap={0.5} mt={0.5}>
         <Tooltip title={copied ? 'Copied' : 'Copy message'}>
           <IconButton
             aria-label="Copy message"
@@ -77,7 +93,10 @@ export function MessageCard({
             onClick={() =>
               void navigator.clipboard
                 .writeText(message.content)
-                .then(() => setCopied(true))
+                .then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                })
                 .catch(() => setCopied(false))
             }
           >
@@ -138,6 +157,7 @@ export function MessageCard({
           </>
         )}
       </Stack>
+      </Box>
       <Dialog open={edit} onClose={() => setEdit(false)} fullWidth>
         <DialogTitle>Edit prompt</DialogTitle>
         <DialogContent>
