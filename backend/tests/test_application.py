@@ -216,6 +216,32 @@ def test_admin_enforcement_and_session_revocation(app):
     assert second.get("/api/conversations").status_code == 401
 
 
+def test_admin_directory_filters_summary_and_last_admin_guard(app):
+    admin_client, second_admin, member = TestClient(app), TestClient(app), TestClient(app)
+    first = register(admin_client, "admin@example.com")
+    other = register(second_admin, "other-admin@example.com")
+    target = register(member, "member@example.com")
+    with Session(get_engine()) as db:
+        db.get(User, first["id"]).role = "admin"
+        db.get(User, other["id"]).role = "admin"
+        db.commit()
+
+    summary = admin_client.get("/api/admin/summary")
+    assert summary.status_code == 200
+    assert summary.json()["administrators"] == 2
+    assert [row["id"] for row in admin_client.get("/api/admin/users?query=member").json()] == [
+        target["id"]
+    ]
+    assert admin_client.get("/api/admin/users?role=admin").status_code == 200
+    assert admin_client.patch(
+        f"/api/admin/users/{other['id']}", json={"role": "user", "active": True}
+    ).status_code == 200
+    assert second_admin.get("/api/admin/users").status_code == 401
+    assert admin_client.patch(
+        f"/api/admin/users/{first['id']}", json={"role": "user", "active": True}
+    ).status_code == 400
+
+
 def test_login_throttling(app):
     client = TestClient(app)
     csrf = client.get("/api/auth/session").json()["csrf"]

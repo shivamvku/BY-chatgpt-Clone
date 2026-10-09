@@ -64,6 +64,11 @@ export function Composer({
   }
   return (
     <Box>
+      {!enabled && (
+        <Alert severity="info" sx={{ mb: 1 }}>
+          You can draft a message, but sending is unavailable until an Azure AI model is configured.
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" onClose={() => setError('')}>
           {error}
@@ -79,7 +84,7 @@ export function Composer({
           aria-label="Message"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          disabled={busy || !enabled}
+          disabled={busy}
           inputProps={{ maxLength: 12000, 'aria-label': 'Message' }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {

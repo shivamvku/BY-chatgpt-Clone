@@ -114,6 +114,13 @@ class AdminUpdate(BaseModel):
     active: bool
 
 
+class AdminSummary(BaseModel):
+    total_users: int
+    active_users: int
+    verified_users: int
+    administrators: int
+
+
 class AuthState(BaseModel):
     user: UserView | None
     csrf: str
