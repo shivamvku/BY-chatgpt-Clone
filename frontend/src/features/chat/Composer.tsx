@@ -191,12 +191,7 @@ export function Composer({
             </Select>
           </Stack>
           {busy ? (
-            <IconButton
-              aria-label="Stop generating"
-              color="primary"
-              onClick={onStop}
-              disabled={!canStop}
-            >
+            <IconButton aria-label="Stop" color="primary" onClick={onStop} disabled={!canStop}>
               <StopRounded />
             </IconButton>
           ) : (

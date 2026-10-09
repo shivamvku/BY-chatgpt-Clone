@@ -71,6 +71,8 @@ test('shows provider failure and supports stopping a response', async ({ page })
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.getByText('failed', { exact: true })).toBeVisible();
   await expect(page.getByText('Partial test output', { exact: true })).toBeVisible();
+  if (test.info().project.name === 'mobile')
+    await page.getByRole('button', { name: 'Open conversations' }).click();
   await page.getByRole('button', { name: 'New conversation', exact: true }).last().click();
   await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Make a plan');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
