@@ -39,7 +39,7 @@ env:
 jobs:
   backend:
     name: 1 · API checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-bookworm
@@ -55,8 +55,8 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql+psycopg://chat:test-only-password@localhost:5432/younderchat_test
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements-dev.lock && pip install --no-deps -e './backend[dev]'
@@ -66,10 +66,10 @@ jobs:
     timeout-minutes: 15
   frontend:
     name: 1 · UI checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: "22"
           cache: npm
@@ -78,7 +78,7 @@ jobs:
         working-directory: frontend
     timeout-minutes: 15
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
@@ -98,11 +98,11 @@ jobs:
       APP_ENV: development
       ALLOWED_ORIGINS: http://localhost:5173
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: "22"
       - run: pip install -r backend/requirements-dev.lock && pip install --no-deps -e './backend[dev]'
@@ -120,11 +120,11 @@ jobs:
     name: 3 · Container build
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.operation != 'release' }}
     needs: browser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
-      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
         with:
           context: .
           file: infra/docker/Dockerfile
@@ -133,12 +133,12 @@ jobs:
   image:
     name: 3 · Build and publish immutable image
     needs: browser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: infra-deploy
     outputs:
       image: ${{ steps.build.outputs.image }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
       - run: bash infra/pipelines/init-state.sh foundation
       - name: Build image on runner and push to Azure Container Registry
@@ -152,12 +152,12 @@ jobs:
   migrations:
     name: 4 · Database migrations
     needs: image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: infra-deploy
     env:
       TF_VAR_image: ${{ needs.image.outputs.image }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
       - run: bash infra/pipelines/release-stack.sh migrations
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'release' }}
@@ -170,14 +170,14 @@ jobs:
     needs:
       - image
       - migrations
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: infra-deploy
     outputs:
       url: ${{ steps.url.outputs.url }}
     env:
       TF_VAR_image: ${{ needs.image.outputs.image }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
       - id: url
         run: bash infra/pipelines/release-stack.sh application
@@ -190,10 +190,10 @@ jobs:
     name: 6 · Smoke tests
     timeout-minutes: 15
     needs: application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: infra-deploy
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
       - run: bash infra/pipelines/init-state.sh application
       - run: bash infra/pipelines/smoke.sh
@@ -205,7 +205,7 @@ jobs:
     name: 4 · Controlled database operation
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation != 'release' }}
     needs: docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: infra-deploy
     permissions:
@@ -215,6 +215,6 @@ jobs:
       OPERATION: ${{ inputs.operation }}
       OPERATOR_EMAIL: ${{ inputs.admin_email }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
       - run: bash infra/pipelines/operations.sh

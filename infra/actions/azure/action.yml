@@ -3,11 +3,11 @@ description: Authenticate with OIDC and install the pinned Terraform runtime.
 runs:
   using: composite
   steps:
-    - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+    - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
       with:
         client-id: ${{ env.ARM_CLIENT_ID }}
         tenant-id: ${{ env.ARM_TENANT_ID }}
         subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
-    - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+    - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       with:
         terraform_version: "1.13.5"
