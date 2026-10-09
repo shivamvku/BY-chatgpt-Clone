@@ -24,25 +24,29 @@ test('register, save appearance, reload and revoke sessions', async ({ page }) =
   if (test.info().project.name === 'mobile')
     await page.getByRole('button', { name: 'Open conversations' }).click();
   await page.getByRole('button', { name: 'Browser User' }).click();
-  await page.getByLabel('Display name').fill('Saved User');
+  await page.getByRole('button', { name: 'Appearance' }).click();
   await page.getByLabel('Appearance', { exact: true }).click();
   await page.getByRole('option', { name: 'Dark', exact: true }).click();
   await page.getByLabel('Contrast', { exact: true }).click();
   await page.getByRole('option', { name: 'High', exact: true }).click();
-  await page.getByRole('button', { name: 'Save profile and appearance' }).click();
+  await page.getByRole('button', { name: 'General' }).click();
+  await page.getByLabel('Display name').fill('Saved User');
+  await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Preferences saved')).toBeVisible();
-  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.getByRole('button', { name: 'Close settings' }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'What will you explore today?' })).toBeVisible();
   if (test.info().project.name === 'mobile')
     await page.getByRole('button', { name: 'Open conversations' }).click();
   await page.getByRole('button', { name: 'Saved User' }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
   await expect(page.getByLabel('Appearance', { exact: true })).toHaveText('Dark');
   await page.screenshot({
     path: `../.codex-tmp/younderchat-${test.info().project.name}.png`,
     fullPage: true,
     animations: 'disabled',
   });
+  await page.getByRole('button', { name: 'Sign-in & security' }).click();
   await page.getByRole('button', { name: 'Sign out all devices' }).click();
   await expect(page.getByRole('tab', { name: 'Sign in', exact: true })).toBeVisible();
 });

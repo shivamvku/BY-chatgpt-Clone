@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Alert, Button, Container, Paper, Stack, Typography } from '@mui/material';
 import { api } from '../../shared/api';
 import { useAuth } from './AuthProvider';
-import { AppearanceControls } from '../settings/AppearanceControls';
 
 export function VerificationScreen() {
   const { user, logout, refresh } = useAuth();
@@ -44,7 +43,6 @@ export function VerificationScreen() {
             <Button disabled={busy} onClick={() => void refresh()}>
               I have verified my email
             </Button>
-            <AppearanceControls />
             <Button disabled={busy} onClick={() => void logout()}>
               Sign out
             </Button>
