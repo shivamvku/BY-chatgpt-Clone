@@ -64,7 +64,10 @@ export function History({
     ? Math.min(100, Math.round((usage.data.requests / Math.max(1, usage.data.request_limit)) * 100))
     : 0;
   const tokenPct = usage.data
-    ? Math.min(100, Math.round((usage.data.reserved_tokens / Math.max(1, usage.data.token_limit)) * 100))
+    ? Math.min(
+        100,
+        Math.round((usage.data.reserved_tokens / Math.max(1, usage.data.token_limit)) * 100),
+      )
     : 0;
   const history = useInfiniteQuery({
     queryKey: ['history', deferredSearch, archived],
@@ -187,7 +190,9 @@ export function History({
               </Typography>
               <Typography
                 variant="caption"
-                color={requestPct >= 90 ? 'error' : tokenPct >= 90 ? 'warning.main' : 'text.secondary'}
+                color={
+                  requestPct >= 90 ? 'error' : tokenPct >= 90 ? 'warning.main' : 'text.secondary'
+                }
                 fontWeight={600}
               >
                 {Math.max(requestPct, tokenPct)}%

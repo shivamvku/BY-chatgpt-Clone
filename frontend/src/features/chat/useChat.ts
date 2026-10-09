@@ -69,7 +69,8 @@ export function useChat(id: string | null, select: (id: string) => void) {
               {
                 ...answer,
                 content: kind === 'delta' ? value.text : '',
-                status: kind === 'delta' ? 'streaming' : kind === 'error' ? 'failed' : answer.status,
+                status:
+                  kind === 'delta' ? 'streaming' : kind === 'error' ? 'failed' : answer.status,
               },
             ];
           }

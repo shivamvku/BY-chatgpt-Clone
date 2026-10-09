@@ -1,11 +1,4 @@
-import {
-  AppBar,
-  Box,
-  Container,
-  IconButton,
-  Toolbar,
-  Typography,
-} from '@mui/material';
+import { AppBar, Box, Container, IconButton, Toolbar, Typography } from '@mui/material';
 import ArrowBackOutlined from '@mui/icons-material/ArrowBackOutlined';
 import { AdminPanel } from './AdminPanel';
 

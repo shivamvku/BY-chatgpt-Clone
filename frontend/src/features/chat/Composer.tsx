@@ -37,7 +37,7 @@ type SpeechRecognitionLike = {
 /** Strip provider prefix for a compact button label. */
 function shortName(name: string): string {
   return name
-    .replace(/^Gemini\s+/i, '')   // "Gemini 3.5 Flash" → "3.5 Flash"
+    .replace(/^Gemini\s+/i, '') // "Gemini 3.5 Flash" → "3.5 Flash"
     .replace(/^Groq\s+·\s+/i, '') // "Groq · Qwen 3.8 27B" → "Qwen 3.8 27B"
     .trim();
 }

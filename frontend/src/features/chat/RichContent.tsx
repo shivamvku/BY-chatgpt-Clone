@@ -51,10 +51,7 @@ function Code({ className, children }: { className?: string; children?: React.Re
           bgcolor: 'action.selected',
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ fontFamily: 'Consolas, monospace', opacity: 0.8 }}
-        >
+        <Typography variant="caption" sx={{ fontFamily: 'Consolas, monospace', opacity: 0.8 }}>
           {label}
         </Typography>
         <Tooltip title={copied ? 'Copied' : 'Copy code'}>
@@ -71,11 +68,7 @@ function Code({ className, children }: { className?: string; children?: React.Re
                 .catch(() => setCopied(false));
             }}
           >
-            {copied ? (
-              <CheckOutlined fontSize="small" />
-            ) : (
-              <ContentCopyOutlined fontSize="small" />
-            )}
+            {copied ? <CheckOutlined fontSize="small" /> : <ContentCopyOutlined fontSize="small" />}
           </IconButton>
         </Tooltip>
       </Box>
