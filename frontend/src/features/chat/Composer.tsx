@@ -280,12 +280,14 @@ export function Composer({
                 </MenuItem>
               ))}
               {/* Groq group */}
-              {groqModels.length > 0 && [
-                <Divider key="groq-divider" />,
-                <ListSubheader key="groq-header" disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
-                  Groq
-                </ListSubheader>,
-              ]}
+              {groqModels.length > 0 && (
+                <>
+                  <Divider />
+                  <ListSubheader disableSticky sx={{ lineHeight: '28px', fontSize: '0.7rem' }}>
+                    Groq
+                  </ListSubheader>
+                </>
+              )}
               {groqModels.map((m) => (
                 <MenuItem
                   key={m.id}
