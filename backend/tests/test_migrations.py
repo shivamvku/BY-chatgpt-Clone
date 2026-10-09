@@ -15,6 +15,7 @@ def test_fresh_migration_chain(monkeypatch, tmp_path):
     config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     command.upgrade(config, "head")
+    command.check(config)
     schema = inspect(get_engine())
     assert {"users", "sessions", "messages", "conversations", "usage"} <= set(
         schema.get_table_names()

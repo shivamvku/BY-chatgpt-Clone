@@ -17,7 +17,6 @@ locals { platform = data.terraform_remote_state.foundation.outputs.application }
 module "app" {
   source              = "../../../modules/container-app"
   name                = local.platform.name
-  location            = local.platform.location
   resource_group_name = local.platform.resource_group_name
   environment_id      = local.platform.environment_id
   identity_id         = local.platform.identity_id

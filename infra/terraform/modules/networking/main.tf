@@ -37,6 +37,20 @@ resource "azurerm_network_security_group" "database" {
   location            = var.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
+  dynamic "security_rule" {
+    for_each = var.management_enabled ? [1] : []
+    content {
+      name                       = "AllowManagementPostgres"
+      priority                   = 120
+      direction                  = "Inbound"
+      access                     = "Allow"
+      protocol                   = "Tcp"
+      source_port_range          = "*"
+      destination_port_range     = "5432"
+      source_address_prefix      = "10.42.3.0/24"
+      destination_address_prefix = "10.42.2.0/24"
+    }
+  }
   security_rule {
     name                       = "AllowAppPostgres"
     priority                   = 100
@@ -90,3 +104,4 @@ resource "azurerm_private_dns_zone_virtual_network_link" "database" {
 output "apps_subnet_id" { value = azurerm_subnet.apps.id }
 output "database_subnet_id" { value = azurerm_subnet.database.id }
 output "database_dns_zone_id" { value = azurerm_private_dns_zone.database.id }
+output "vnet_name" { value = azurerm_virtual_network.this.name }

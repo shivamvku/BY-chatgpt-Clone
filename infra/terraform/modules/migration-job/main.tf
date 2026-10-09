@@ -33,6 +33,21 @@ resource "azurerm_container_app_job" "migrations" {
       command = ["python"]
       args    = ["-m", "app.db.migrate"]
       env {
+        name  = "RELEASE_COMMIT"
+        value = var.release_commit
+      }
+      env {
+        name  = "RELEASE_IMAGE"
+        value = var.image
+      }
+      dynamic "env" {
+        for_each = var.observer_secret_id == "" ? [] : [1]
+        content {
+          name        = "OBSERVER_DATABASE_URL"
+          secret_name = "observer-database-url"
+        }
+      }
+      env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
       }
@@ -46,6 +61,14 @@ resource "azurerm_container_app_job" "migrations" {
     name                = "runtime-database-url"
     identity            = var.identity_id
     key_vault_secret_id = var.runtime_database_secret_id
+  }
+  dynamic "secret" {
+    for_each = var.observer_secret_id == "" ? [] : [var.observer_secret_id]
+    content {
+      name                = "observer-database-url"
+      identity            = var.identity_id
+      key_vault_secret_id = secret.value
+    }
   }
 }
 

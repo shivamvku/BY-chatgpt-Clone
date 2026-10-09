@@ -6,6 +6,11 @@ resource "random_password" "runtime" {
   length  = 32
   special = false
 }
+resource "random_password" "observer" {
+  count   = var.observer_enabled ? 1 : 0
+  length  = 32
+  special = false
+}
 resource "azurerm_postgresql_flexible_server" "this" {
   name                          = "${var.name}-pg"
   resource_group_name           = var.resource_group_name
@@ -41,3 +46,8 @@ output "runtime_connection_url" {
   value     = "postgresql+psycopg://chat_runtime:${random_password.runtime.result}@${azurerm_postgresql_flexible_server.this.fqdn}:5432/chat?sslmode=require"
   sensitive = true
 }
+output "observer_connection_url" {
+  value     = var.observer_enabled ? "postgresql+psycopg://chat_observer:${random_password.observer[0].result}@${azurerm_postgresql_flexible_server.this.fqdn}:5432/chat?sslmode=require" : ""
+  sensitive = true
+}
+output "fqdn" { value = azurerm_postgresql_flexible_server.this.fqdn }

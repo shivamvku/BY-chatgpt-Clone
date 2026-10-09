@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "vm_size": "Standard_B1s",
+  "ssh_username": "dbaccess",
+  "shutdown_time": "2300",
+  "shutdown_timezone": "India Standard Time"
+}

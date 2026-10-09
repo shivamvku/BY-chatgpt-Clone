@@ -1,6 +1,10 @@
 variable "name" {
   type = string
 }
+variable "observer_enabled" {
+  type    = bool
+  default = false
+}
 variable "location" {
   type = string
 }

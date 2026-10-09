@@ -9,6 +9,7 @@ output "application" {
     registry_server            = module.registry.login_server
     database_secret_id         = module.secrets.database_secret_id
     runtime_database_secret_id = module.secrets.runtime_database_secret_id
+    observer_secret_id         = module.secrets.observer_secret_id
     resend_secret_id           = module.secrets.resend_secret_id
     migration_identity_id      = module.migration_identity.id
     azure_client_id            = module.identity.client_id
