@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.entities import Conversation, Message, RateBucket, Usage, UsageEvent, User, now
+from app.services import provider
 from app.services.retention import cutoff
 from app.services.security import digest
 from app.services.subscriptions import limits, policy
@@ -71,10 +72,9 @@ def prepare_generation(
     content: str | None,
     parent_id: str | None,
     request_id: str,
+    model_id: str,
 ) -> Message:
     settings = get_settings()
-    if not settings.llm_endpoint or not settings.llm_model:
-        raise HTTPException(503, "AI is not configured. Configure an Azure model before sending.")
     # Lock user first to serialize usage reservations across all their conversations.
     user = db.scalar(select(User).where(User.id == user_id).with_for_update())
     if not user or not user.active:
@@ -82,6 +82,11 @@ def prepare_generation(
     if not user.verified_user:
         raise HTTPException(403, "Verify your email before using chat")
     subscription, plan = policy(db, user_id, lock=True)
+    allowed = {model["id"]: model for model in provider.choices(plan.id)}
+    if model_id not in allowed:
+        raise HTTPException(403, "This model is not included with your plan")
+    if not allowed[model_id]["available"]:
+        raise HTTPException(503, "This model is not configured. Contact an administrator.")
     request_limit, token_limit = limits(plan)
     conversation = owned(db, user_id, conversation_id, lock=True)
     ordinal = (
@@ -188,7 +193,7 @@ def prepare_generation(
         ordinal=ordinal + (2 if content is not None else 1),
         status="pending",
         request_id=request_id,
-        model=settings.llm_model,
+        model=model_id,
     )
     db.add(answer)
     db.flush()
@@ -208,7 +213,7 @@ def prepare_generation(
             id=answer.id,
             user_id=user_id,
             subscription_id=subscription.id,
-            model=settings.llm_model,
+            model=model_id,
             reserved_tokens=reserve,
         )
     )

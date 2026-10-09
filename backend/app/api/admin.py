@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.contracts import AdminSummary, AdminUpdate, UserView
+from app.schemas.contracts import AdminSummary, AdminUpdate, AdminUserView, UserView
 from app.services import administration as service
 from app.services.security import Identity, admin
 
 router = APIRouter(prefix="/admin", tags=["administration"])
 
 
-@router.get("/users", response_model=list[UserView])
+@router.get("/users", response_model=list[AdminUserView])
 def users(
     current: Identity = Depends(admin),
     db: Session = Depends(get_db),

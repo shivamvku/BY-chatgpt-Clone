@@ -20,7 +20,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import MenuOutlined from '@mui/icons-material/MenuOutlined';
-import Add from '@mui/icons-material/Add';
 import { History } from '../history/History';
 import { SettingsDialog } from '../settings/SettingsDialog';
 import { Composer } from './Composer';
@@ -51,12 +50,18 @@ export default function ChatWorkspace() {
       queryKey: ['models'],
       queryFn: () => api<ModelInfo>('/models'),
     });
+  const [model, setModel] = useState('gemini-flash');
   const visible = visibleBranch(chat.messages.data || [], chat.leaf),
     scroll = useRef<HTMLDivElement>(null),
     nearBottom = useRef(true);
   useEffect(() => {
     if (nearBottom.current) scroll.current?.scrollTo({ top: scroll.current.scrollHeight });
   }, [chat.messages.data]);
+  useEffect(() => {
+    if (models.data?.models.some((item) => item.id === model && item.available)) return;
+    const available = models.data?.models.find((item) => item.available);
+    if (available) setModel(available.id);
+  }, [model, models.data]);
   function newChat() {
     setActive(null);
     chat.setLeaf(null);
@@ -169,11 +174,8 @@ export default function ChatWorkspace() {
               </IconButton>
             )}
             <Typography fontWeight={700} flex={1}>
-              {models.data?.models[0]?.name || 'YounderChat'}
+              YounderChat
             </Typography>
-            <IconButton aria-label="New conversation" disabled={chat.busy} onClick={newChat}>
-              <Add />
-            </IconButton>
           </Toolbar>
         </AppBar>
         <Box
@@ -248,7 +250,7 @@ export default function ChatWorkspace() {
                       key={prompt}
                       variant="outlined"
                       disabled={chat.busy || !models.data?.configured}
-                      onClick={() => void chat.send(prompt, null)}
+                      onClick={() => void chat.send(prompt, null, model)}
                     >
                       {prompt}
                     </Button>
@@ -263,8 +265,11 @@ export default function ChatWorkspace() {
             busy={chat.busy}
             canStop={chat.generating}
             enabled={!!models.data?.configured}
+            models={models.data?.models || []}
+            model={model}
+            onModelChange={setModel}
             onStop={() => void chat.stop()}
-            onSend={(content) => chat.send(content, visible.at(-1)?.id || null)}
+            onSend={(content) => chat.send(content, visible.at(-1)?.id || null, model)}
           />
         </Container>
       </Stack>

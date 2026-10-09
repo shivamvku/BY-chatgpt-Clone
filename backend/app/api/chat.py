@@ -21,8 +21,8 @@ router = APIRouter(tags=["chat"])
 
 
 @router.get("/models", response_model=ModelInfo)
-def models(current: Identity = Depends(identity)):
-    return service.models(current=current)
+def models(current: Identity = Depends(identity), db: Session = Depends(get_db)):
+    return service.models(current=current, db=db)
 
 
 @router.get("/usage", response_model=UsageView)

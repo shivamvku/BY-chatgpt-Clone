@@ -24,8 +24,7 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("SERVE_FRONTEND", "false")
     monkeypatch.setenv("ALLOWED_ORIGINS", "http://testserver")
-    monkeypatch.setenv("LLM_ENDPOINT", "https://example.invalid/openai/v1")
-    monkeypatch.setenv("LLM_MODEL", "test-provider")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-provider-key")
     get_settings.cache_clear()
     get_engine.cache_clear()
     Base.metadata.create_all(get_engine())
@@ -58,10 +57,14 @@ def conversation(client):
     return response.json()["id"]
 
 
-def send(client, identifier, request_id=None):
+def send(client, identifier, request_id=None, model="gemini-flash"):
     return client.post(
         f"/api/conversations/{identifier}/messages",
-        json={"content": "Hello", "request_id": request_id or str(uuid.uuid4())},
+        json={
+            "content": "Hello",
+            "request_id": request_id or str(uuid.uuid4()),
+            "model": model,
+        },
     )
 
 
@@ -118,7 +121,7 @@ def test_cross_user_conversation_isolation(app):
 
 
 def test_stream_persistence_idempotency_and_branches(app, monkeypatch):
-    async def fake(messages):
+    async def fake(messages, model_id):
         assert messages[-1]["content"] == "Hello"
         yield "A real "
         yield "test fixture"
@@ -147,7 +150,7 @@ def test_stream_persistence_idempotency_and_branches(app, monkeypatch):
 
 
 def test_provider_failure_does_not_complete_partial_output(app, monkeypatch):
-    async def failing(messages):
+    async def failing(messages, model_id):
         yield "partial"
         raise RuntimeError("secret upstream diagnostic")
 
@@ -172,10 +175,21 @@ def test_quota_provider_disabled_and_archive(app, monkeypatch):
     get_settings.cache_clear()
     assert send(client, identifier).status_code == 429
     assert client.get(f"/api/conversations/{identifier}/messages").json() == []
-    monkeypatch.setenv("LLM_ENDPOINT", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
     get_settings.cache_clear()
     assert send(client, identifier).status_code == 503
     assert not client.get("/api/models").json()["configured"]
+
+
+def test_model_catalog_and_basic_plan_enforcement(app):
+    client = TestClient(app)
+    register(client)
+    catalog = client.get("/api/models").json()
+    assert catalog["configured"] is True
+    assert catalog["models"] == [
+        {"id": "gemini-flash", "name": "Gemini 2.5 Flash", "available": True}
+    ]
+    assert send(client, conversation(client), model="groq-fast").status_code == 403
 
 
 def test_private_image_validation_and_isolation(app):
@@ -232,14 +246,23 @@ def test_admin_directory_filters_summary_and_last_admin_guard(app):
     assert [row["id"] for row in admin_client.get("/api/admin/users?query=member").json()] == [
         target["id"]
     ]
+    directory = admin_client.get("/api/admin/users?query=member").json()
+    assert directory[0]["plan"] == "basic"
+    assert directory[0]["subscription_owner"] is True
     assert admin_client.get("/api/admin/users?role=admin").status_code == 200
-    assert admin_client.patch(
-        f"/api/admin/users/{other['id']}", json={"role": "user", "active": True}
-    ).status_code == 200
+    assert (
+        admin_client.patch(
+            f"/api/admin/users/{other['id']}", json={"role": "user", "active": True}
+        ).status_code
+        == 200
+    )
     assert second_admin.get("/api/admin/users").status_code == 401
-    assert admin_client.patch(
-        f"/api/admin/users/{first['id']}", json={"role": "user", "active": True}
-    ).status_code == 400
+    assert (
+        admin_client.patch(
+            f"/api/admin/users/{first['id']}", json={"role": "user", "active": True}
+        ).status_code
+        == 400
+    )
 
 
 def test_login_throttling(app):
@@ -278,7 +301,7 @@ def test_stop_cancels_a_silent_upstream(app, monkeypatch):
 
     from app.services.generation import claim, events
 
-    async def silent(messages):
+    async def silent(messages, model_id):
         await asyncio.sleep(60)
         yield "should never be emitted"
 
@@ -314,7 +337,7 @@ def test_asgi_cancel_scope_preserves_final_state(app, monkeypatch):
 
     from app.services.generation import claim, events
 
-    async def silent(messages):
+    async def silent(messages, model_id):
         await asyncio.sleep(60)
         yield "unreachable"
 

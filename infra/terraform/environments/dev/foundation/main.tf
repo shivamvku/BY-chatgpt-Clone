@@ -92,6 +92,8 @@ module "secrets" {
   migration_principal_id = module.migration_identity.principal_id
   email_enabled          = jsondecode(file("${path.module}/../../../../config/email.json")).enabled
   resend_api_key         = var.resend_api_key
+  gemini_api_key         = var.gemini_api_key
+  groq_api_key           = var.groq_api_key
   observer_enabled       = local.db_access.enabled
   observer_database_url  = module.database.observer_connection_url
 }

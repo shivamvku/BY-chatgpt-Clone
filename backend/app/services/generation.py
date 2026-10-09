@@ -14,7 +14,7 @@ from app.services import provider
 from app.services.conversations import context_messages, owned
 
 
-def claim(user_id: str, message_id: str) -> list[dict[str, str]]:
+def claim(user_id: str, message_id: str) -> tuple[list[dict[str, str]], str]:
     with Session(get_engine()) as db:
         row = db.get(Message, message_id)
         if not row or row.role != "assistant":
@@ -29,7 +29,7 @@ def claim(user_id: str, message_id: str) -> list[dict[str, str]]:
             raise HTTPException(409, "Response was already started; reload conversation")
         messages = context_messages(db, row.conversation_id, row.parent_id)
         db.commit()
-        return messages
+        return messages, row.model
 
 
 def persist(message_id: str, content: str, status: str = "streaming") -> bool:
@@ -60,11 +60,12 @@ def still_running(message_id: str) -> bool:
         return db.scalar(select(Message.status).where(Message.id == message_id)) == "streaming"
 
 
-async def events(message_id: str, messages: list[dict[str, str]], request):
+async def events(message_id: str, context: tuple[list[dict[str, str]], str], request):
+    messages, model_id = context
     content, finished = "", False
     last_save = 0.0
     last_check = 0.0
-    upstream = provider.stream_completion(messages)
+    upstream = provider.stream_completion(messages, model_id)
     pending = None
     yield event("start", {"id": message_id})
     try:

@@ -36,6 +36,22 @@ resource "azurerm_container_app" "this" {
       key_vault_secret_id = secret.value
     }
   }
+  dynamic "secret" {
+    for_each = var.gemini_secret_id == "" ? [] : [var.gemini_secret_id]
+    content {
+      name                = "gemini-api-key"
+      identity            = var.identity_id
+      key_vault_secret_id = secret.value
+    }
+  }
+  dynamic "secret" {
+    for_each = var.groq_secret_id == "" ? [] : [var.groq_secret_id]
+    content {
+      name                = "groq-api-key"
+      identity            = var.identity_id
+      key_vault_secret_id = secret.value
+    }
+  }
   template {
     min_replicas = 0
     max_replicas = 2
@@ -49,6 +65,20 @@ resource "azurerm_container_app" "this" {
         content {
           name  = upper(env.key)
           value = env.value
+        }
+      }
+      dynamic "env" {
+        for_each = var.gemini_secret_id == "" ? [] : [1]
+        content {
+          name        = "GEMINI_API_KEY"
+          secret_name = "gemini-api-key"
+        }
+      }
+      dynamic "env" {
+        for_each = var.groq_secret_id == "" ? [] : [1]
+        content {
+          name        = "GROQ_API_KEY"
+          secret_name = "groq-api-key"
         }
       }
       env {

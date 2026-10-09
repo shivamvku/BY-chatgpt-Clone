@@ -27,3 +27,11 @@ variable "resend_secret_id" {
   type    = string
   default = ""
 }
+variable "gemini_secret_id" {
+  type    = string
+  default = ""
+}
+variable "groq_secret_id" {
+  type    = string
+  default = ""
+}

@@ -1,7 +1,6 @@
 import asyncio
 import json
 from datetime import UTC, datetime
-from functools import lru_cache
 
 from fastapi import HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
@@ -18,6 +17,7 @@ from app.schemas.contracts import (
     Regenerate,
     SendMessage,
 )
+from app.services import provider
 from app.services.conversations import owned, prepare_generation
 from app.services.generation import claim, events
 from app.services.retention import cutoff
@@ -25,17 +25,16 @@ from app.services.security import Identity
 from app.services.subscriptions import limits, policy
 
 
-def models(*, current: Identity):
-    settings = get_settings()
-    return model_metadata(settings.llm_endpoint, settings.llm_model)
+def models(*, current: Identity, db: Session):
+    _, plan = policy(db, current.user.id)
+    return model_metadata(plan_id=plan.id)
 
 
-@lru_cache(maxsize=8)
-def model_metadata(endpoint: str, model: str):
-    """Bounded cache of public configuration only; contains no user data."""
+def model_metadata(*, plan_id: str):
+    choices = provider.choices(plan_id)
     return {
-        "configured": bool(endpoint and model),
-        "models": [{"id": model, "name": model}] if model else [],
+        "configured": any(model["available"] for model in choices),
+        "models": choices,
         "capabilities": {"images": "display-only", "tools": False},
     }
 
@@ -153,7 +152,13 @@ def messages(*, conversation_id: str, current: Identity, db: Session):
 
 def send(*, conversation_id: str, data: SendMessage, current: Identity, db: Session):
     return prepare_generation(
-        db, current.user.id, conversation_id, data.content, data.parent_id, data.request_id
+        db,
+        current.user.id,
+        conversation_id,
+        data.content,
+        data.parent_id,
+        data.request_id,
+        data.model,
     )
 
 
@@ -165,7 +170,7 @@ def regenerate(
     if not row or row.conversation_id != conversation_id or row.role != "assistant":
         raise HTTPException(404, "Response not found")
     return prepare_generation(
-        db, current.user.id, conversation_id, None, row.parent_id, data.request_id
+        db, current.user.id, conversation_id, None, row.parent_id, data.request_id, data.model
     )
 
 

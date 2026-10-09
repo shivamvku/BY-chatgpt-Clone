@@ -40,8 +40,14 @@ export interface Page<T> {
 }
 export interface ModelInfo {
   configured: boolean;
-  models: { id: string; name: string }[];
+  models: { id: string; name: string; available: boolean }[];
   capabilities: { images: string; tools: boolean };
+}
+export interface AdminUser extends User {
+  plan: string | null;
+  plan_name: string | null;
+  subscription_status: string | null;
+  subscription_owner: boolean;
 }
 export interface Usage {
   day: string;
