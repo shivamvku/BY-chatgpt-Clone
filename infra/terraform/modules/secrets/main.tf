@@ -82,14 +82,15 @@ resource "azurerm_key_vault_secret" "groq" {
   key_vault_id = azurerm_key_vault.this.id
   depends_on   = [azurerm_role_assignment.deploy, azurerm_role_assignment.operator]
 }
-resource "azurerm_role_assignment" "runtime_ai" {
-  for_each = {
-    for name, secret in {
-      gemini = try(azurerm_key_vault_secret.gemini[0].versionless_id, "")
-      groq   = try(azurerm_key_vault_secret.groq[0].versionless_id, "")
-    } : name => secret if secret != ""
-  }
-  scope                = each.value
+resource "azurerm_role_assignment" "runtime_gemini" {
+  count                = var.gemini_api_key == "" ? 0 : 1
+  scope                = "${azurerm_key_vault.this.id}/secrets/gemini-api-key"
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = var.runtime_principal_id
+}
+resource "azurerm_role_assignment" "runtime_groq" {
+  count                = var.groq_api_key == "" ? 0 : 1
+  scope                = "${azurerm_key_vault.this.id}/secrets/groq-api-key"
   role_definition_name = "Key Vault Secrets User"
   principal_id         = var.runtime_principal_id
 }
