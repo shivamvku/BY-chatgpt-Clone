@@ -14,3 +14,4 @@ resource "azurerm_container_app_environment" "this" {
   tags = var.tags
 }
 output "id" { value = azurerm_container_app_environment.this.id }
+output "default_domain" { value = azurerm_container_app_environment.this.default_domain }

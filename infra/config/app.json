@@ -1,0 +1,11 @@
+{
+  "allowed_origins": "https://aichat.sdigurukulam.in",
+  "daily_requests": 30,
+  "daily_token_limit": 40000,
+  "global_daily_token_limit": 100000,
+  "max_output_tokens": 1024,
+  "max_context_chars": 24000,
+  "generation_timeout": 120,
+  "session_days": 7,
+  "session_idle_hours": 24
+}

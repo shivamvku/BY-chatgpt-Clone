@@ -33,6 +33,7 @@ jobs:
       TF_VAR_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
       TF_VAR_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
       TF_VAR_operator_principal_id: ${{ vars.AZURE_OPERATOR_PRINCIPAL_ID }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Load versioned budget policy
@@ -45,6 +46,8 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: '1.13.5'
+      - name: Verify model quota if AI deployment is enabled
+        run: python3 infra/pipelines/check-ai.py
       - run: bash infra/pipelines/init-state.sh foundation
       - run: terraform -chdir=infra/terraform/environments/dev/foundation plan -input=false -out=foundation.tfplan
       - if: inputs.action == 'apply'

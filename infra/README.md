@@ -89,7 +89,7 @@ gh auth login
 ./infra/scripts/Configure-GitHub.ps1
 ```
 
-The script configures non-secret Azure identifiers as repository variables and creates `infra-plan` / `infra-deploy` environments restricted to the repository's default branch. It does not configure required reviewers. Federation subjects match these environment names exactly. This script was executed and its variables and `main` branch restriction verified on 8 October 2026; workflows have not run end to end yet.
+The script configures non-secret Azure identifiers as repository variables and creates `infra-plan` / `infra-deploy` environments restricted to the repository's default branch. It does not configure required reviewers. Federation subjects match these environment names exactly. See the implementation plan for verified workflow execution and current deployment status.
 
 GitHub repositories created after 15 July 2026 use immutable OIDC subjects containing owner and repository IDs. Set bootstrap `github_repository_subject` to `OWNER@OWNER_ID/REPO@REPO_ID`; obtain the IDs using `gh api repos/OWNER/REPO --jq '{owner_id: .owner.id, repository_id: .id}'`. The example contains verified IDs for this repository. Leave this variable null only for a repository that still uses the legacy names-only subject. Federation remains restricted to the exact `infra-plan` / `infra-deploy` environment. See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
 
@@ -105,4 +105,14 @@ All resources remain Terraform-managed. Image builds, job starts and smoke reque
 
 Use backwards-compatible migrations: the old revision remains live while migration runs. Failed migrations stop rollout. Failed smoke checks fail the release; automatic rollback is not implemented. To roll back, redeploy a known image through the app Terraform root. Database downgrades require a separate review.
 
-Pipeline execution requires bootstrap, foundation outputs, repository variables and service capacity. Azure deployment has not yet been verified end to end.
+Pipeline execution requires bootstrap, foundation outputs, repository variables and service capacity. See the implementation plan for current deployment verification.
+
+## Application foundation update
+
+Before releasing this application branch, plan/apply the updated foundation. It adds a distinct migration identity and runtime database secret, restricts web-runtime Key Vault access, and exports application/model settings. The migration job uses administrator credentials only inside the VNet, runs `python -m app.db.migrate`, and provisions the restricted runtime role. Application rollout follows successful migrations. Applying only the application root against old foundation outputs will fail.
+
+Model policy lives in `config/ai.json`, disabled by default. After an eligible subscription and model quota/pricing are verified, enable it in a reviewed commit, register Microsoft.CognitiveServices through the checked-in provider script, and run the read-only quota check and foundation plan. The infrastructure workflow rejects enabled AI with no verified matching quota. Keep model capacity low, use keyless runtime RBAC, and review the saved plan before apply. Model catalog availability alone is not subscription eligibility.
+
+App origins/session limits/request/token limits live in `config/app.json`. The Azure hostname is added to allowed origins by Terraform alongside the custom domain. No credentials belong in either JSON file. Budget alerts are not a hard limit; per-user/app-wide token reservations provide additional application controls.
+
+The branch is for review and CI; deployment environments remain restricted to main. Do not bypass that restriction to deploy the branch.

@@ -18,4 +18,5 @@ resource "azurerm_role_assignment" "push" {
   principal_id         = var.deploy_principal_id
 }
 output "name" { value = azurerm_container_registry.this.name }
+output "id" { value = azurerm_container_registry.this.id }
 output "login_server" { value = azurerm_container_registry.this.login_server }

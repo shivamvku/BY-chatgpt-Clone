@@ -1,14 +1,34 @@
-import { Box, Chip, Container, Stack, Typography } from '@mui/material';
-
-export function App() {
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { CircularProgress, Stack } from '@mui/material';
+import { useAuth } from '../features/auth/AuthProvider';
+import { AuthScreen } from '../features/auth/AuthScreen';
+import { AccountAction, initialAccountLink, readAccountLink } from '../features/auth/AccountAction';
+import { VerificationScreen } from '../features/auth/VerificationScreen';
+const ChatWorkspace = lazy(() => import('../features/chat/ChatWorkspace'));
+function Loading() {
   return (
-    <Container maxWidth="md">
-      <Stack minHeight="100vh" justifyContent="center" spacing={3}>
-        <Chip label="YounderChat · DEVELOPMENT" color="primary" variant="outlined" sx={{ alignSelf: 'flex-start' }} />
-        <Typography variant="h2" fontWeight={700}>A space for better conversations.</Typography>
-        <Typography color="text.secondary" variant="h6">React and FastAPI are ready. Authentication and streaming chat are the next milestones.</Typography>
-        <Box component="a" href="/api/health/live" sx={{ color: 'primary.main' }}>Check API health</Box>
-      </Stack>
-    </Container>
+    <Stack minHeight="100dvh" justifyContent="center" alignItems="center">
+      <CircularProgress aria-label="Loading application" />
+    </Stack>
+  );
+}
+export function App() {
+  const auth = useAuth();
+  const [link, setLink] = useState(initialAccountLink);
+  useEffect(() => {
+    // Account links may arrive while the app is already open (hash-only navigation).
+    const syncLink = () => setLink(readAccountLink());
+    window.addEventListener('hashchange', syncLink);
+    return () => window.removeEventListener('hashchange', syncLink);
+  }, []);
+  if (auth.loading) return <Loading />;
+  if (link) return <AccountAction link={link} onClose={() => setLink(null)} />;
+  if (auth.user && !auth.user.verified_user) return <VerificationScreen />;
+  return auth.user ? (
+    <Suspense fallback={<Loading />}>
+      <ChatWorkspace />
+    </Suspense>
+  ) : (
+    <AuthScreen />
   );
 }

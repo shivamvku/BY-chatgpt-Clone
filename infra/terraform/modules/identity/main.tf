@@ -6,3 +6,4 @@ resource "azurerm_user_assigned_identity" "runtime" {
 }
 output "id" { value = azurerm_user_assigned_identity.runtime.id }
 output "principal_id" { value = azurerm_user_assigned_identity.runtime.principal_id }
+output "client_id" { value = azurerm_user_assigned_identity.runtime.client_id }

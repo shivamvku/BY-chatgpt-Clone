@@ -25,3 +25,8 @@ variable "database_secret_id" {
 variable "image" {
   type = string
 }
+variable "app_config" { type = map(string) }
+variable "resend_secret_id" {
+  type    = string
+  default = ""
+}

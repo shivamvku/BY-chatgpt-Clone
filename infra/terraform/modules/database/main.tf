@@ -2,6 +2,10 @@ resource "random_password" "administrator" {
   length  = 32
   special = false
 }
+resource "random_password" "runtime" {
+  length  = 32
+  special = false
+}
 resource "azurerm_postgresql_flexible_server" "this" {
   name                          = "${var.name}-pg"
   resource_group_name           = var.resource_group_name
@@ -31,5 +35,9 @@ resource "azurerm_postgresql_flexible_server_database" "this" {
 }
 output "connection_url" {
   value     = "postgresql+psycopg://chatadmin:${random_password.administrator.result}@${azurerm_postgresql_flexible_server.this.fqdn}:5432/chat?sslmode=require"
+  sensitive = true
+}
+output "runtime_connection_url" {
+  value     = "postgresql+psycopg://chat_runtime:${random_password.runtime.result}@${azurerm_postgresql_flexible_server.this.fqdn}:5432/chat?sslmode=require"
   sensitive = true
 }
