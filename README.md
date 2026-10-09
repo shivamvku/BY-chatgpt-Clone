@@ -11,6 +11,8 @@ See the [implementation plan](docs/implementation-plan.md), the single source of
 - `infra/`: Terraform modules, environment roots, Docker, configuration examples and pipeline scripts.
 - `.github/workflows/`: GitHub-required workflow entrypoints calling infrastructure scripts.
 
+GitHub Actions has two workflows: **Infrastructure** and **Application**. Both preserve PR checks. Manual cloud stages run only from main. See [pipeline and database access setup](infra/README.md) and [Alembic tracking](backend/README.md#track-schema-changes).
+
 ## Prerequisites
 
 Python 3.12, Node.js 22, Docker Desktop with its Linux engine running, Terraform 1.13.5, Azure CLI and optionally GitHub CLI for scripted repository configuration. Azure resources are not needed for local development.

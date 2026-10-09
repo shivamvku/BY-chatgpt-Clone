@@ -34,6 +34,15 @@ variable "runtime_database_url" {
   sensitive = true
 }
 variable "migration_principal_id" { type = string }
+variable "observer_enabled" {
+  type    = bool
+  default = false
+}
+variable "observer_database_url" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
 variable "email_enabled" {
   type    = bool
   default = false

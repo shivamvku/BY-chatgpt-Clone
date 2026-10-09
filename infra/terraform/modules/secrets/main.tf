@@ -68,4 +68,14 @@ resource "azurerm_role_assignment" "runtime_email" {
   principal_id         = var.runtime_principal_id
 }
 output "resend_secret_id" { value = var.email_enabled ? azurerm_key_vault_secret.resend[0].versionless_id : "" }
+resource "azurerm_key_vault_secret" "observer" {
+  count        = var.observer_enabled ? 1 : 0
+  name         = "observer-database-url"
+  value        = var.observer_database_url
+  key_vault_id = azurerm_key_vault.this.id
+  depends_on   = [azurerm_role_assignment.deploy, azurerm_role_assignment.operator]
+}
+output "observer_secret_id" {
+  value = var.observer_enabled ? azurerm_key_vault_secret.observer[0].versionless_id : ""
+}
 

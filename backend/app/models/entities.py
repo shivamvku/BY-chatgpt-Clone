@@ -175,3 +175,13 @@ class Invitation(Base):
     email: Mapped[str] = mapped_column(String(254))
     expires_at: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16), default="pending")
+
+
+class SchemaMigration(Base):
+    __tablename__ = "schema_migrations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    from_revision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    to_revision: Mapped[str] = mapped_column(String(32))
+    commit_sha: Mapped[str] = mapped_column(String(40), default="")
+    image: Mapped[str] = mapped_column(String(255), default="")
+    applied_at: Mapped[int] = mapped_column(Integer, default=now)

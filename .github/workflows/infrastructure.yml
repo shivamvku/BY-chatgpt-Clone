@@ -1,54 +1,95 @@
 name: Infrastructure
-on:
+"on":
+  pull_request: null
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      action:
-        description: Plan or apply foundation infrastructure
+      stack:
+        description: Infrastructure state to operate on
         type: choice
-        options: [plan, apply]
+        options:
+          - foundation
+          - domains
+        default: foundation
+      action:
+        description: Plan or apply the selected state
+        type: choice
+        options:
+          - plan
+          - apply
         default: plan
 permissions:
   contents: read
-  id-token: write
 concurrency:
-  group: azure-dev-deployment
-  cancel-in-progress: false
+  group:
+    ${{ github.event_name == 'workflow_dispatch' && 'azure-dev-deployment' || format('infrastructure-{0}', github.ref)
+    }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+env:
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  ARM_CLIENT_ID: ${{ inputs.action == 'apply' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+  TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+  TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_state_resource_group: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+  TF_VAR_state_storage_account: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  TF_VAR_resource_group_name: ${{ vars.AZURE_RESOURCE_GROUP }}
+  TF_VAR_name: ${{ vars.AZURE_APP_NAME }}
+  BUDGET_ALERT_EMAIL: ${{ vars.AZURE_BUDGET_ALERT_EMAIL }}
+  TF_VAR_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
+  TF_VAR_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
+  TF_VAR_operator_principal_id: ${{ vars.AZURE_OPERATOR_PRINCIPAL_ID }}
 jobs:
-  foundation:
-    name: Foundation infrastructure
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
-    env:
-      ARM_USE_OIDC: 'true'
-      ARM_USE_AZUREAD: 'true'
-      ARM_CLIENT_ID: ${{ inputs.action == 'apply' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
-      TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
-      TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_resource_group_name: ${{ vars.AZURE_RESOURCE_GROUP }}
-      TF_VAR_name: ${{ vars.AZURE_APP_NAME }}
-      BUDGET_ALERT_EMAIL: ${{ vars.AZURE_BUDGET_ALERT_EMAIL }}
-      TF_VAR_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
-      TF_VAR_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
-      TF_VAR_operator_principal_id: ${{ vars.AZURE_OPERATOR_PRINCIPAL_ID }}
-      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+  validate:
+    name: 1 · Terraform validation and policy tests
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Load versioned budget policy
-        run: python3 infra/pipelines/configure-budget.py
-      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
         with:
-          client-id: ${{ env.ARM_CLIENT_ID }}
-          tenant-id: ${{ env.ARM_TENANT_ID }}
-          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
-        with:
-          terraform_version: '1.13.5'
-      - name: Verify model quota if AI deployment is enabled
-        run: python3 infra/pipelines/check-ai.py
-      - run: bash infra/pipelines/init-state.sh foundation
-      - run: terraform -chdir=infra/terraform/environments/dev/foundation plan -input=false -out=foundation.tfplan
-      - if: inputs.action == 'apply'
-        run: terraform -chdir=infra/terraform/environments/dev/foundation apply -input=false foundation.tfplan
+          terraform_version: 1.13.5
+      - run: bash infra/pipelines/validate.sh
+    timeout-minutes: 15
+  provision:
+    name: 2 · Terraform plan and apply
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      STACK: ${{ inputs.stack }}
+      ACTION: ${{ inputs.action }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+      TF_VAR_db_access_cidr: ${{ vars.DB_ACCESS_CIDR }}
+      TF_VAR_db_access_public_key: ${{ vars.DB_ACCESS_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/infrastructure.sh
+  verify:
+    name: 3 · Verify infrastructure
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.action == 'apply' }}
+    needs: provision
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: infra-deploy
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      STACK: ${{ inputs.stack }}
+      AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/verify-infrastructure.sh

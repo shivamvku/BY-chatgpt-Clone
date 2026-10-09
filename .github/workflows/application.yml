@@ -1,0 +1,220 @@
+name: Application
+"on":
+  pull_request: null
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Release or run a controlled database operation
+        type: choice
+        options:
+          - release
+          - promote-admin
+          - migration-status
+        default: release
+      admin_email:
+        description: Existing verified email (only for promote-admin)
+        type: string
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'azure-dev-deployment' || format('application-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+env:
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+  TF_STATE_STORAGE_ACCOUNT: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+  TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_state_resource_group: ${{ vars.TF_STATE_RESOURCE_GROUP }}
+  TF_VAR_state_storage_account: ${{ vars.TF_STATE_STORAGE_ACCOUNT }}
+  TF_VAR_release_commit: ${{ github.sha }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+jobs:
+  backend:
+    name: 1 · API checks
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_USER: chat
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: younderchat_test
+        ports:
+          - 5432:5432
+        options:
+          --health-cmd "pg_isready -U chat -d younderchat_test" --health-interval 5s --health-timeout 5s --health-retries
+          10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://chat:test-only-password@localhost:5432/younderchat_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements-dev.lock && pip install --no-deps -e './backend[dev]'
+      - run: ruff check backend
+      - run: pytest
+        working-directory: backend
+    timeout-minutes: 15
+  frontend:
+    name: 1 · UI checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci && npm run lint && npm run format:check && npm run test && npm run build
+        working-directory: frontend
+    timeout-minutes: 15
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_USER: chat
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: younderchat_test
+        ports:
+          - 5432:5432
+        options:
+          --health-cmd "pg_isready -U chat -d younderchat_test" --health-interval 5s --health-timeout 5s --health-retries
+          10
+    env:
+      DATABASE_URL: postgresql+psycopg://chat:test-only-password@localhost:5432/younderchat_test
+      RUNTIME_DATABASE_URL: postgresql+psycopg://chat_runtime:test-runtime-only-password@localhost:5432/younderchat_test
+      APP_ENV: development
+      ALLOWED_ORIGINS: http://localhost:5173
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22"
+      - run: pip install -r backend/requirements-dev.lock && pip install --no-deps -e './backend[dev]'
+      - run: python -m app.db.migrate
+        working-directory: backend
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Run browser tests
+        run: bash infra/pipelines/browser.sh
+    name: 2 · Browser integration
+    needs:
+      - backend
+      - frontend
+  docker:
+    name: 3 · Container build
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.operation != 'release' }}
+    needs: browser
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          push: false
+    timeout-minutes: 15
+  image:
+    name: 3 · Build and publish immutable image
+    needs: browser
+    runs-on: ubuntu-24.04
+    environment: infra-deploy
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/init-state.sh foundation
+      - name: Build image on runner and push to Azure Container Registry
+        id: build
+        run: bash infra/pipelines/build-image.sh
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'release' }}
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 15
+  migrations:
+    name: 4 · Database migrations
+    needs: image
+    runs-on: ubuntu-24.04
+    environment: infra-deploy
+    env:
+      TF_VAR_image: ${{ needs.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/release-stack.sh migrations
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'release' }}
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 15
+  application:
+    name: 5 · Deploy application
+    needs:
+      - image
+      - migrations
+    runs-on: ubuntu-24.04
+    environment: infra-deploy
+    outputs:
+      url: ${{ steps.url.outputs.url }}
+    env:
+      TF_VAR_image: ${{ needs.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - id: url
+        run: bash infra/pipelines/release-stack.sh application
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'release' }}
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 15
+  smoke:
+    name: 6 · Smoke tests
+    timeout-minutes: 15
+    needs: application
+    runs-on: ubuntu-24.04
+    environment: infra-deploy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/init-state.sh application
+      - run: bash infra/pipelines/smoke.sh
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation == 'release' }}
+    permissions:
+      contents: read
+      id-token: write
+  operations:
+    name: 4 · Controlled database operation
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.operation != 'release' }}
+    needs: docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: infra-deploy
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      OPERATION: ${{ inputs.operation }}
+      OPERATOR_EMAIL: ${{ inputs.admin_email }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./infra/actions/azure
+      - run: bash infra/pipelines/operations.sh

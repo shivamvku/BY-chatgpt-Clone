@@ -11,8 +11,9 @@ resource "random_string" "suffix" {
   special = false
 }
 locals {
-  location = data.azurerm_resource_group.this.location
-  tags     = { project = "by-chat", environment = "dev", managed_by = "terraform" }
+  location  = data.azurerm_resource_group.this.location
+  tags      = { project = "by-chat", environment = "dev", managed_by = "terraform" }
+  db_access = jsondecode(file("${path.module}/../../../../config/db-access.json"))
 }
 
 module "networking" {
@@ -21,6 +22,7 @@ module "networking" {
   location            = local.location
   resource_group_name = var.resource_group_name
   tags                = local.tags
+  management_enabled  = local.db_access.enabled
 }
 
 module "identity" {
@@ -71,6 +73,7 @@ module "database" {
   subnet_id           = module.networking.database_subnet_id
   dns_zone_id         = module.networking.database_dns_zone_id
   depends_on          = [module.networking]
+  observer_enabled    = local.db_access.enabled
 }
 
 module "secrets" {
@@ -89,6 +92,8 @@ module "secrets" {
   migration_principal_id = module.migration_identity.principal_id
   email_enabled          = jsondecode(file("${path.module}/../../../../config/email.json")).enabled
   resend_api_key         = var.resend_api_key
+  observer_enabled       = local.db_access.enabled
+  observer_database_url  = module.database.observer_connection_url
 }
 
 module "container_environment" {

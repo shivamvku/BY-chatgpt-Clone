@@ -26,3 +26,11 @@ variable "image" {
   type = string
 }
 variable "runtime_database_secret_id" { type = string }
+variable "observer_secret_id" {
+  type    = string
+  default = ""
+}
+variable "release_commit" {
+  type    = string
+  default = ""
+}

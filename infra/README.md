@@ -1,6 +1,6 @@
 # Infrastructure and deployment
 
-All application resources are defined in Terraform. No portal-created application resources are required. The Central US bootstrap and foundation were applied on 8 October 2026, with Azure remote state and final plans reporting no changes. GitHub OIDC variables and deployment environments are configured. Migration and application deployment remain pending. See [deployment verification](docs/deployment-2026-10-08.md).
+All Azure application resources are defined in Terraform. Current deployment status is recorded in the [implementation plan](../docs/implementation-plan.md). The reports under `infra/docs/` are historical cost/deployment evidence, not current status.
 
 Cost preflight: the portal now confirms unused PostgreSQL B1ms/32 GB database/32 GB backup allowances and 31 days/month of Standard registry usage. Development now selects Standard to match that meter. These allowances can cover the database and registry baseline while eligible and within limits; app compute, logs, backups beyond the allowance, operations, data transfer and AI remain variable. Remaining trial credit is still unverified. Review [the preflight report](docs/preflight-2026-10-08.md) before applying; the INR 1,500 budget alert does not enforce a spending limit.
 
@@ -8,7 +8,7 @@ Cost preflight: the portal now confirms unused PostgreSQL B1ms/32 GB database/32
 
 1. `bootstrap/`: state storage, app resource group, GitHub plan/deploy identities, federation and scoped roles. Run once as a subscription administrator. It starts with local state; the apply wrapper migrates it to the newly created remote backend. Protect any residual local backups.
 2. `terraform/environments/dev/foundation/`: VNet, delegated subnets, private PostgreSQL/DNS, identities, registry, vault, logging, optional budget and Container Apps environment.
-3. `terraform/environments/dev/migrations/`: private-network migration job using the release image.
+3. `terraform/environments/dev/migrations/`: private-network migration and operator jobs using the release image.
 4. `terraform/environments/dev/application/`: HTTPS ingress, app container, health probes and bounded scaling.
 
 After bootstrap migration, all four roots use Azure remote state with leases, versioning and soft delete. Keys are `bootstrap.tfstate`, `dev/foundation.tfstate`, `dev/migrations.tfstate`, and `dev/application.tfstate`. Deployment workflows share a concurrency group; Terraform locking protects each state independently.
@@ -97,9 +97,10 @@ The configuration script sets `AZURE_BUDGET_ALERT_EMAIL` from your signed-in Azu
 
 Workflows:
 
-- `ci.yml`: backend lint/tests, frontend build, Terraform validation/network tests and Docker build. No Azure credentials in PR jobs.
-- `infrastructure.yml`: manually select foundation plan or apply. Apply generates and consumes a plan in one run. Inspect a plan-only run first; this is not immutable cross-run plan approval.
-- `deploy.yml`: manual release from the default branch. Reruns checks, builds a commit-tagged image on the GitHub runner, pushes it to ACR using Azure OIDC authentication, resolves its immutable digest, applies the migration-job root, runs/waits for migrations, then applies the app root and checks readiness/frontend. Both roots use the same digest. This avoids relying on ACR Tasks availability for trial-credit subscriptions; see [Microsoft guidance](https://learn.microsoft.com/en-us/answers/questions/1528748/push-with-acr-task-are-not-permitted).
+- **Infrastructure** (`infrastructure.yml`): Terraform validation/policy tests on PRs and main; manual `foundation` or `domains` plan/apply, then verification. Domain DNS display, propagation wait and TLS checks remain supported. Inspect a plan-only run first; apply consumes a fresh saved plan on the same runner. Sensitive plans are never uploaded.
+- **Application** (`application.yml`): API/UI checks → browser integration → container build on PRs and main. Manual `release` continues with immutable image publication → migrations → app deployment → smoke checks. Both Terraform roots consume the same digest. Manual `promote-admin` and `migration-status` run the fixed operator job after checks.
+
+Only these two workflows are active in the repository. Previous GitHub run history remains available. Cloud jobs require the main branch and OIDC deployment environments; PR checks cannot log into Azure. Shared Azure authentication lives in `infra/actions/azure/`; substantive scripts live in `infra/pipelines/`.
 
 All resources remain Terraform-managed. Image builds, job starts and smoke requests are operational actions. The migration job reaches PostgreSQL inside the VNet; GitHub-hosted runners cannot directly connect to it.
 
@@ -116,3 +117,17 @@ Model policy lives in `config/ai.json`, disabled by default. After an eligible s
 App origins/session limits/request/token limits live in `config/app.json`. The Azure hostname is added to allowed origins by Terraform alongside the custom domain. No credentials belong in either JSON file. Budget alerts are not a hard limit; per-user/app-wide token reservations provide additional application controls.
 
 The branch is for review and CI; deployment environments remain restricted to main. Do not bypass that restriction to deploy the branch.
+
+## Database management and administrator provisioning
+
+Database access is opt-in through `config/db-access.json`. It creates a management subnet (`10.42.3.0/24`), a small SSH VM, a Standard public IP for that VM, a /32 SSH rule, a database-subnet rule restricted to PostgreSQL, and automatic shutdown at the policy time. The database remains private. The VM, disk and public IP add charges; deallocation does not remove disk/IP charges. Review subscription availability and current prices against the existing budget before enabling. Keep `enabled=false` until the public IP/CIDR and SSH public key are provided.
+
+Set GitHub variables `DB_ACCESS_CIDR` (your public IPv4 with `/32`) and `DB_ACCESS_PUBLIC_KEY` (public key only). Never upload a private key. Register Microsoft.Compute and Microsoft.DevTestLab through `scripts/Register-Providers.ps1`. Commit the policy enablement, review/run Infrastructure foundation, then Application release so the migration job provisions database permissions.
+
+The migration job creates `chat_observer` with SELECT on application data and limited `operator_users` / `operator_files` views. It cannot read password hashes, session/recovery tokens, raw image bytes, modify data, or change schema. Its password-bearing connection URL is stored as the `observer-database-url` Key Vault secret; retrieve credentials privately using your authorized secret access, not workflow logs or chat. Disabling observer configuration revokes new logins on the next migration/grants run. Do not reuse `chatadmin` or `chat_runtime` for DBeaver.
+
+Read the non-secret foundation `database_access` output for the actual SSH host. In DBeaver select PostgreSQL, remote host `bychat-dev-pg.postgres.database.azure.com`, port `5432`, database `chat`, user `chat_observer`. Enable SSH tunnel to the output host, port `22`, user `dbaccess`, using your local private key; verify the SSH host key. Enable PostgreSQL TLS with CA/hostname validation for the original database hostname. See [DBeaver SSH configuration](https://dbeaver.com/docs/dbeaver/SSH-Configuration/). Do not disable validation to work around a hostname mismatch.
+
+For an app administrator, first deploy Application `release` to install the reviewed operator job. Then run Application `promote-admin` with the existing verified email. The persisted command is `python -m app.ops`; CLI command overrides are never used. Promotion is idempotent, audited, rejects unverified/inactive accounts, revokes sessions on a role change, and re-queries the stored role. Sign in again and confirm the Admin section independently. Application `migration-status` runs the read-only revision/history query. Live job logs can expire; persisted logs and DBeaver's `schema_migrations` provide evidence.
+
+Schema authoring/tracking commands and queries are documented in [backend setup](../backend/README.md#track-schema-changes). Keep every schema change in a new Alembic revision, not a DBeaver ALTER statement. The observer account deliberately cannot administer schema.
