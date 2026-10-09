@@ -13,7 +13,8 @@ def test_gemini_protocol(monkeypatch):
 
     def handler(request):
         assert request.url.path.endswith(":streamGenerateContent")
-        assert request.url.params["key"] == "test-only-key"
+        # Key is sent via header, not query param (see x-goog-api-key usage in provider)
+        assert request.headers["x-goog-api-key"] == "test-only-key"
         payload = (
             b'data: {"candidates":[{"content":{"parts":[{"text":"hello"}]}}]}\n\n'
             b'data: {"candidates":[{"content":{"parts":[{"text":" world"}]}}]}\n\n'
@@ -65,6 +66,17 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
         ]
 
     assert asyncio.run(collect()) == ["hello"]
-    assert [row["id"] for row in provider.choices("basic")] == ["gemini-flash"]
-    assert [row["id"] for row in provider.choices("pro")] == ["gemini-flash", "groq-fast"]
+    # With only GROQ_API_KEY set, Gemini models are unavailable but still listed.
+    # 'auto' must not appear in any plan's choices.
+    ids = [row["id"] for row in provider.choices("basic")]
+    assert "auto" not in ids
+    assert ids[0] == "gemini-3.5-flash"   # first by priority
+    assert "groq-qwen3-27b" in ids
     get_settings.cache_clear()
+
+
+def test_choices_no_auto():
+    """The 'auto' virtual model must never appear in the choices list."""
+    for plan in ("basic", "pro", "pro_max"):
+        ids = [row["id"] for row in provider.choices(plan)]
+        assert "auto" not in ids

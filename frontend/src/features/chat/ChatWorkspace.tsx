@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
-  AppBar,
   Box,
   Button,
   CircularProgress,
@@ -15,13 +14,13 @@ import {
   IconButton,
   Stack,
   TextField,
-  Toolbar,
   Typography,
   useMediaQuery,
 } from '@mui/material';
 import MenuOutlined from '@mui/icons-material/MenuOutlined';
 import { History } from '../history/History';
 import { SettingsDialog } from '../settings/SettingsDialog';
+import { AdminPage } from '../admin/AdminPage';
 import { Composer } from './Composer';
 import { MessageCard } from './MessageCard';
 import { useChat } from './useChat';
@@ -33,6 +32,7 @@ export default function ChatWorkspace() {
   const [active, setActive] = useState<string | null>(null),
     [drawer, setDrawer] = useState(false),
     [settings, setSettings] = useState(false),
+    [adminPage, setAdminPage] = useState(false),
     [dialog, setDialog] = useState<{
       row: Conversation;
       action: string;
@@ -50,7 +50,7 @@ export default function ChatWorkspace() {
       queryKey: ['models'],
       queryFn: () => api<ModelInfo>('/models'),
     });
-  const [model, setModel] = useState('gemini-flash');
+  const [model, setModel] = useState('gemini-3.5-flash');
   const visible = visibleBranch(chat.messages.data || [], chat.leaf),
     scroll = useRef<HTMLDivElement>(null),
     nearBottom = useRef(true);
@@ -59,8 +59,9 @@ export default function ChatWorkspace() {
   }, [chat.messages.data]);
   useEffect(() => {
     if (models.data?.models.some((item) => item.id === model && item.available)) return;
-    const available = models.data?.models.find((item) => item.available);
-    if (available) setModel(available.id);
+    // Fall back to the first available model (no 'auto' in the list any more)
+    const fallback = models.data?.models.find((item) => item.available);
+    if (fallback) setModel(fallback.id);
   }, [model, models.data]);
   function newChat() {
     setActive(null);
@@ -126,6 +127,10 @@ export default function ChatWorkspace() {
         setDrawer(false);
         setSettings(true);
       }}
+      onAdmin={() => {
+        setDrawer(false);
+        setAdminPage(true);
+      }}
       onAction={(row, action) => void historyAction(row, action)}
     />
   );
@@ -161,23 +166,27 @@ export default function ChatWorkspace() {
         {history}
       </Drawer>
       <Stack component="main" flex={1} minWidth={0}>
-        <AppBar
-          position="static"
-          color="transparent"
-          elevation={0}
-          sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
-        >
-          <Toolbar>
-            {!wide && (
-              <IconButton aria-label="Open conversations" onClick={() => setDrawer(true)}>
-                <MenuOutlined />
-              </IconButton>
-            )}
-            <Typography fontWeight={700} flex={1}>
+        {/* Mobile-only header — desktop has no title bar */}
+        {!wide && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              px: 1,
+              py: 0.5,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              minHeight: 48,
+            }}
+          >
+            <IconButton aria-label="Open conversations" onClick={() => setDrawer(true)}>
+              <MenuOutlined />
+            </IconButton>
+            <Typography fontWeight={700} sx={{ ml: 1 }}>
               YounderChat
             </Typography>
-          </Toolbar>
-        </AppBar>
+          </Box>
+        )}
         <Box
           ref={scroll}
           onScroll={() => {
@@ -189,7 +198,7 @@ export default function ChatWorkspace() {
           flex={1}
           overflow="auto"
         >
-          <Container maxWidth="md" sx={{ py: 3 }}>
+          <Container maxWidth="md" sx={{ py: 4, px: { xs: 2, md: 3 } }}>
             {actionError && (
               <Alert severity="error" onClose={() => setActionError('')}>
                 {actionError}
@@ -230,7 +239,7 @@ export default function ChatWorkspace() {
                 />
               ))
             ) : (
-              <Stack minHeight="45vh" justifyContent="center" alignItems="center" gap={2}>
+              <Stack minHeight="60vh" justifyContent="center" alignItems="center" gap={2}>
                 <Typography variant="overline" color="primary" fontWeight={800}>
                   A little curiosity goes a long way
                 </Typography>
@@ -274,6 +283,11 @@ export default function ChatWorkspace() {
         </Container>
       </Stack>
       {settings && <SettingsDialog open onClose={() => setSettings(false)} />}
+      {adminPage && (
+        <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, bgcolor: 'background.default' }}>
+          <AdminPage onBack={() => setAdminPage(false)} />
+        </Box>
+      )}
       <Dialog open={!!dialog} onClose={() => setDialog(null)} fullWidth>
         <DialogTitle>
           {dialog?.action === 'Delete' ? 'Delete conversation?' : 'Rename conversation'}

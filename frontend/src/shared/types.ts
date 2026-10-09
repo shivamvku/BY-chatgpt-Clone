@@ -38,9 +38,14 @@ export interface Page<T> {
   items: T[];
   next_cursor: string | null;
 }
+export interface ModelChoice {
+  id: string;
+  name: string;
+  available: boolean;
+}
 export interface ModelInfo {
   configured: boolean;
-  models: { id: string; name: string; available: boolean }[];
+  models: ModelChoice[];
   capabilities: { images: string; tools: boolean };
 }
 export interface AdminUser extends User {

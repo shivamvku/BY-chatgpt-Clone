@@ -45,6 +45,13 @@ export function buildTheme(mode: 'light' | 'dark', contrast: Contrast) {
             },
           },
           body: { margin: 0 },
+          '::-webkit-scrollbar': { width: '6px', height: '6px' },
+          '::-webkit-scrollbar-track': { background: 'transparent' },
+          '::-webkit-scrollbar-thumb': {
+            background: dark ? '#28415c' : '#c5d0de',
+            borderRadius: '3px',
+          },
+          a: { textDecorationColor: 'inherit' },
         },
       },
     },

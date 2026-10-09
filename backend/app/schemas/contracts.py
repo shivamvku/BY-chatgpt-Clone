@@ -5,6 +5,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+# Import lazily to avoid circular imports at module load time.
+def _valid_model_ids() -> set[str]:
+    from app.services import provider  # noqa: PLC0415
+    return set(provider.MODELS.keys()) | set(provider._LEGACY_ALIAS.keys())
+
+
 class Credentials(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=10, max_length=128)
@@ -110,12 +116,30 @@ class SendMessage(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
     parent_id: str | None = None
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
+    # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
+    # so old clients/stored data continue to resolve correctly.
+    model: str = Field(default="gemini-3.5-flash", max_length=80)
+
+    @field_validator("model")
+    @classmethod
+    def model_must_be_known(cls, value: str) -> str:
+        if value not in _valid_model_ids():
+            raise ValueError("Unknown model ID. Choose a model from the available list.")
+        return value
 
 
 class Regenerate(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
+    # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
+    # so old clients/stored data continue to resolve correctly.
+    model: str = Field(default="gemini-3.5-flash", max_length=80)
+
+    @field_validator("model")
+    @classmethod
+    def model_must_be_known(cls, value: str) -> str:
+        if value not in _valid_model_ids():
+            raise ValueError("Unknown model ID. Choose a model from the available list.")
+        return value
 
 
 class AdminUpdate(BaseModel):

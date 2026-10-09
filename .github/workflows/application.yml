@@ -63,6 +63,9 @@ jobs:
       - run: ruff check backend
       - run: pytest
         working-directory: backend
+      - name: Dependency vulnerability scan (pip-audit)
+        run: pip install pip-audit && pip-audit -r backend/requirements.lock --skip-editable
+        continue-on-error: true
     timeout-minutes: 15
   frontend:
     name: 1 · UI checks
@@ -76,6 +79,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci && npm run lint && npm run format:check && npm run test && npm run build
         working-directory: frontend
+      - name: Dependency vulnerability scan (npm audit)
+        run: npm audit --audit-level=high
+        working-directory: frontend
+        continue-on-error: true
     timeout-minutes: 15
   browser:
     runs-on: ubuntu-24.04

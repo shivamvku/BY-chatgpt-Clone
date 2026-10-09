@@ -63,6 +63,7 @@ infra/bootstrap/backend.remote.tf
 # Local tooling and temporary files
 *.log
 .codex-tmp/
+.agents/
 tmp/
 temp/
 *.tmp
