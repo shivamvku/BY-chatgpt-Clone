@@ -9,6 +9,7 @@ module "db_access" {
   allowed_cidr        = var.db_access_cidr
   public_key          = var.db_access_public_key
   vm_size             = local.db_access.vm_size
+  image_sku           = local.db_access.image_sku
   username            = local.db_access.ssh_username
   shutdown_time       = local.db_access.shutdown_time
   shutdown_timezone   = local.db_access.shutdown_timezone

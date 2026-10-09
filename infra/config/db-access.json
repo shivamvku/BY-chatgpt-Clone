@@ -1,6 +1,7 @@
 {
-  "enabled": false,
-  "vm_size": "Standard_B1s",
+  "enabled": true,
+  "vm_size": "Standard_B2pts_v2",
+  "image_sku": "22_04-lts-arm64",
   "ssh_username": "dbaccess",
   "shutdown_time": "2300",
   "shutdown_timezone": "India Standard Time"
