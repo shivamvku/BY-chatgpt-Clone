@@ -99,77 +99,77 @@ export function MessageCard({
         }}
       >
         <Stack direction="row" alignItems="center" gap={0.5} mt={0.5}>
-        <Tooltip title={copied ? 'Copied' : 'Copy message'}>
-          <IconButton
-            aria-label="Copy message"
-            size="small"
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(message.content)
-                .then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                })
-                .catch(() => setCopied(false))
-            }
-          >
-            <ContentCopyOutlined fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        {message.role === 'user' ? (
-          <Tooltip title="Edit prompt">
-            <span>
-              <IconButton
-                aria-label="Edit prompt"
-                disabled={busy}
-                size="small"
-                onClick={() => {
-                  setContent(message.content);
-                  setEdit(true);
-                }}
-              >
-                <EditOutlined fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        ) : (
-          <Tooltip title={active ? 'Stop response' : 'Regenerate response'}>
-            <span>
-              <IconButton
-                aria-label={active ? 'Stop response' : 'Regenerate response'}
-                size="small"
-                disabled={busy || message.status === 'stopping'}
-                onClick={() => (active ? onStop(message) : onRegenerate(message))}
-              >
-                {active ? <StopRounded fontSize="small" /> : <ReplayOutlined fontSize="small" />}
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
-        {variants.length > 1 && (
-          <>
+          <Tooltip title={copied ? 'Copied' : 'Copy message'}>
             <IconButton
-              aria-label="Previous version"
+              aria-label="Copy message"
               size="small"
-              disabled={busy || index === 0}
-              onClick={() => onSelect(variants[index - 1].id)}
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(message.content)
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => setCopied(false))
+              }
             >
-              <ChevronLeft />
+              <ContentCopyOutlined fontSize="small" />
             </IconButton>
-            <Typography variant="caption">
-              {index + 1}/{variants.length}
-            </Typography>
-            <IconButton
-              aria-label="Next version"
-              size="small"
-              disabled={busy || index === variants.length - 1}
-              onClick={() => onSelect(variants[index + 1].id)}
-            >
-              <ChevronRight />
-            </IconButton>
-          </>
-        )}
-      </Stack>
+          </Tooltip>
+          {message.role === 'user' ? (
+            <Tooltip title="Edit prompt">
+              <span>
+                <IconButton
+                  aria-label="Edit prompt"
+                  disabled={busy}
+                  size="small"
+                  onClick={() => {
+                    setContent(message.content);
+                    setEdit(true);
+                  }}
+                >
+                  <EditOutlined fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title={active ? 'Stop response' : 'Regenerate response'}>
+              <span>
+                <IconButton
+                  aria-label={active ? 'Stop response' : 'Regenerate response'}
+                  size="small"
+                  disabled={busy || message.status === 'stopping'}
+                  onClick={() => (active ? onStop(message) : onRegenerate(message))}
+                >
+                  {active ? <StopRounded fontSize="small" /> : <ReplayOutlined fontSize="small" />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {variants.length > 1 && (
+            <>
+              <IconButton
+                aria-label="Previous version"
+                size="small"
+                disabled={busy || index === 0}
+                onClick={() => onSelect(variants[index - 1].id)}
+              >
+                <ChevronLeft />
+              </IconButton>
+              <Typography variant="caption">
+                {index + 1}/{variants.length}
+              </Typography>
+              <IconButton
+                aria-label="Next version"
+                size="small"
+                disabled={busy || index === variants.length - 1}
+                onClick={() => onSelect(variants[index + 1].id)}
+              >
+                <ChevronRight />
+              </IconButton>
+            </>
+          )}
+        </Stack>
       </Box>
       <Dialog open={edit} onClose={() => setEdit(false)} fullWidth>
         <DialogTitle>Edit prompt</DialogTitle>

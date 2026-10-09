@@ -18,9 +18,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     email_from: str = ""
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.5-flash"  # legacy override; catalogue owns model ids
     groq_api_key: str = ""
-    groq_model: str = "qwen/qwen3.8-27b"  # legacy override; catalogue owns model ids
     daily_requests: int = Field(30, ge=0, le=1000)
     daily_token_limit: int = Field(40000, ge=0, le=1000000)
     global_daily_token_limit: int = Field(100000, ge=0, le=1000000)

@@ -4,6 +4,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Import lazily to avoid circular imports at module load time.
+def _valid_model_ids() -> set[str]:
+    from app.services import provider  # noqa: PLC0415
+    return set(provider.MODELS.keys()) | set(provider._LEGACY_ALIAS.keys())
+
 
 class Credentials(BaseModel):
     email: str = Field(min_length=3, max_length=254)
@@ -110,12 +115,26 @@ class SendMessage(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
     parent_id: str | None = None
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
+    model: str = Field(default="auto", max_length=80)
+
+    @field_validator("model")
+    @classmethod
+    def model_must_be_known(cls, value: str) -> str:
+        if value not in _valid_model_ids():
+            raise ValueError("Unknown model ID. Choose a model from the available list.")
+        return value
 
 
 class Regenerate(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
-    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
+    model: str = Field(default="auto", max_length=80)
+
+    @field_validator("model")
+    @classmethod
+    def model_must_be_known(cls, value: str) -> str:
+        if value not in _valid_model_ids():
+            raise ValueError("Unknown model ID. Choose a model from the available list.")
+        return value
 
 
 class AdminUpdate(BaseModel):

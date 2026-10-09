@@ -190,14 +190,10 @@ async def _gemini(messages: list[dict[str, str]], gemini_model: str) -> AsyncIte
 
 
 async def stream_completion(
-    messages: list[dict[str, str]], model_id: str, plan_id: str = "pro"
+    messages: list[dict[str, str]], model_id: str
 ) -> AsyncIterator[str]:
     """Stream a completion. Resolves legacy aliases before dispatching."""
     canonical = _resolve(model_id)
-
-    # If 'auto' alias resolves to 'auto' still (shouldn't happen), pick best
-    if canonical == "auto":
-        canonical = resolve_auto(plan_id)
 
     entry = MODELS.get(canonical)
     if not entry:
