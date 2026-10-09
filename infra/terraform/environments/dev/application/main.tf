@@ -23,13 +23,12 @@ module "app" {
   registry_server     = local.platform.registry_server
   database_secret_id  = local.platform.runtime_database_secret_id
   resend_secret_id    = try(local.platform.resend_secret_id, "")
+  gemini_secret_id    = try(local.platform.gemini_secret_id, "")
+  groq_secret_id      = try(local.platform.groq_secret_id, "")
   tags                = local.platform.tags
   image               = var.image
   app_config = merge(jsondecode(file("${path.module}/../../../../config/app.json")), {
     allowed_origins = "${jsondecode(file("${path.module}/../../../../config/app.json")).allowed_origins},https://${local.platform.name}.${local.platform.environment_domain}"
-    llm_endpoint    = local.platform.llm_endpoint
-    llm_model       = local.platform.llm_model
-    azure_client_id = local.platform.azure_client_id
     public_url      = jsondecode(file("${path.module}/../../../../config/email.json")).public_url
     email_from      = jsondecode(file("${path.module}/../../../../config/email.json")).enabled ? jsondecode(file("${path.module}/../../../../config/email.json")).from : ""
   })

@@ -69,6 +69,13 @@ class UserView(BaseModel):
     created_at: int
 
 
+class AdminUserView(UserView):
+    plan: str | None
+    plan_name: str | None
+    subscription_status: str | None
+    subscription_owner: bool
+
+
 class ConversationCreate(BaseModel):
     title: str = Field(default="New conversation", min_length=1, max_length=120)
 
@@ -103,10 +110,12 @@ class SendMessage(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
     parent_id: str | None = None
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
 
 
 class Regenerate(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+    model: str = Field(default="gemini-flash", pattern=r"^(gemini-flash|groq-fast)$")
 
 
 class AdminUpdate(BaseModel):
@@ -142,6 +151,7 @@ class ConversationPage(BaseModel):
 class ModelChoice(BaseModel):
     id: str
     name: str
+    available: bool
 
 
 class Capabilities(BaseModel):

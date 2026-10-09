@@ -68,9 +68,9 @@ For browser tests, use an isolated development database, run migrations, start `
 
 ## Real model configuration
 
-Set `LLM_ENDPOINT` to an Azure OpenAI v1 base URL and `LLM_MODEL` to the deployment name. Development can use `LLM_API_KEY` stored locally or Azure CLI authentication through `DefaultAzureCredential`. Production uses the managed identity and keyless Azure RBAC. Never put provider credentials in frontend configuration. Request/token limits are documented in `.env.example`; Azure configuration is versioned in `infra/config/app.json` and `infra/config/ai.json`.
+Set `GEMINI_API_KEY` for Gemini 2.5 Flash and `GROQ_API_KEY` for Groq's Llama 3.3 70B model. Basic accounts can use Gemini; Pro and Pro Max accounts can choose either model. Use `.env` only for local development. Production keys are GitHub secrets delivered through Terraform to Azure Key Vault and then referenced by the Container App managed identity. Never put provider credentials in frontend configuration.
 
-Without a configured endpoint/model, account and history functions remain available while sending is disabled. Browser fixtures do not establish real inference verification.
+Without a configured provider key, account and history functions remain available while that model is unavailable. Browser fixtures do not establish real inference verification.
 
 To provision the initial administrator, register an account and run `python -m app.manage promote-admin --email YOUR_EMAIL` using trusted operator database access from an approved network. Public registration always creates a regular user. Email verification/reset remain unavailable until email-provider integration is configured.
 

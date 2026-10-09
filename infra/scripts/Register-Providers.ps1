@@ -12,7 +12,6 @@ param(
         'Microsoft.Insights',
         'Microsoft.Consumption',
         'Microsoft.BillingBenefits',
-        'Microsoft.CognitiveServices',
         'Microsoft.Compute',
         'Microsoft.DevTestLab'
     )

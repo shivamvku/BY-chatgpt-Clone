@@ -11,10 +11,9 @@ output "application" {
     runtime_database_secret_id = module.secrets.runtime_database_secret_id
     observer_secret_id         = module.secrets.observer_secret_id
     resend_secret_id           = module.secrets.resend_secret_id
+    gemini_secret_id           = module.secrets.gemini_secret_id
+    groq_secret_id             = module.secrets.groq_secret_id
     migration_identity_id      = module.migration_identity.id
-    azure_client_id            = module.identity.client_id
-    llm_endpoint               = local.ai.enabled ? "${azurerm_cognitive_account.ai[0].endpoint}openai/v1" : ""
-    llm_model                  = local.ai.enabled ? azurerm_cognitive_deployment.chat[0].name : ""
     tags                       = local.tags
   }
 }

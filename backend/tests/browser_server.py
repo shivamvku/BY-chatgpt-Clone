@@ -8,8 +8,7 @@ import uvicorn
 if os.environ.get("APP_ENV", "development") != "development":
     raise RuntimeError("Browser fixture is forbidden in production")
 
-os.environ["LLM_ENDPOINT"] = "https://test-fixture.invalid/openai/v1"
-os.environ["LLM_MODEL"] = "Test fixture — not real AI"
+os.environ["GEMINI_API_KEY"] = "test-fixture-not-a-real-key"
 os.environ["EMAIL_FROM"] = "test-fixture@example.com"
 os.environ["RESEND_API_KEY"] = "test-fixture-not-a-real-key"
 
@@ -41,7 +40,7 @@ def email_link(email: str, purpose: str = "verify"):
     return {"token": token}
 
 
-async def fixture_response(messages):
+async def fixture_response(messages, model_id):
     prompt = messages[-1]["content"]
     if "simulate failure" in prompt:
         yield "Partial test output"

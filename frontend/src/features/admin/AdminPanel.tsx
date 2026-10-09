@@ -28,7 +28,7 @@ import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined';
 import GroupOutlined from '@mui/icons-material/GroupOutlined';
 import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
 import { api } from '../../shared/api';
-import type { User } from '../../shared/types';
+import type { AdminUser, User } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 import { PlanPanel } from './PlanPanel';
 
@@ -38,7 +38,7 @@ interface AdminSummary {
   verified_users: number;
   administrators: number;
 }
-type Change = { row: User; kind: 'role' | 'access' } | null;
+type Change = { row: AdminUser; kind: 'role' | 'access' } | null;
 
 function SummaryCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
   return (
@@ -78,13 +78,13 @@ export function AdminPanel() {
   }, [after, deferredQuery, role, active]);
   const users = useQuery({
     queryKey: ['admin-users', params],
-    queryFn: () => api<User[]>(`/admin/users?${params}`),
+    queryFn: () => api<AdminUser[]>(`/admin/users?${params}`),
   });
   const summary = useQuery({
     queryKey: ['admin-summary'],
     queryFn: () => api<AdminSummary>('/admin/summary'),
   });
-  async function update(row: User, values: Partial<User>) {
+  async function update(row: AdminUser, values: Partial<User>) {
     setBusy(true);
     setError('');
     try {
@@ -270,21 +270,34 @@ export function AdminPanel() {
                     </Stack>
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value=""
-                      displayEmpty
-                      size="small"
-                      disabled={busy}
-                      onChange={(event) => void assign(row.id, event.target.value)}
-                      inputProps={{ 'aria-label': `Assign plan for ${row.name}` }}
-                    >
-                      <MenuItem value="" disabled>
-                        Assign plan
-                      </MenuItem>
-                      <MenuItem value="basic">Basic</MenuItem>
-                      <MenuItem value="pro">Pro</MenuItem>
-                      <MenuItem value="pro_max">Pro Max</MenuItem>
-                    </Select>
+                    <Stack spacing={0.5} alignItems="flex-start">
+                      <Select
+                        value={row.plan || ''}
+                        displayEmpty
+                        size="small"
+                        sx={{ minWidth: 130 }}
+                        disabled={busy || !row.subscription_owner}
+                        onChange={(event) => void assign(row.id, event.target.value)}
+                        inputProps={{ 'aria-label': `Assign plan for ${row.name}` }}
+                      >
+                        <MenuItem value="" disabled>
+                          No plan assigned
+                        </MenuItem>
+                        <MenuItem value="basic">Basic</MenuItem>
+                        <MenuItem value="pro">Pro</MenuItem>
+                        <MenuItem value="pro_max">Pro Max</MenuItem>
+                      </Select>
+                      {row.plan_name && (
+                        <Typography variant="caption" color="text.secondary">
+                          {row.plan_name} · {row.subscription_status}
+                        </Typography>
+                      )}
+                      {!row.subscription_owner && row.plan && (
+                        <Typography variant="caption" color="text.secondary">
+                          Managed by plan owner
+                        </Typography>
+                      )}
+                    </Stack>
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" justifyContent="flex-end" spacing={0.5} flexWrap="wrap">

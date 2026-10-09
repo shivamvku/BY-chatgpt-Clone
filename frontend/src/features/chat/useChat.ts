@@ -72,7 +72,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       await queries.invalidateQueries({ queryKey: ['usage'] });
     }
   }
-  async function send(content: string, parentId: string | null) {
+  async function send(content: string, parentId: string | null, model = 'gemini-flash') {
     if (submission.current) return false;
     submission.current = true;
     setBusy(true);
@@ -101,6 +101,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
         content,
         parent_id: parentId,
         request_id: retry.current.key,
+        model,
       });
       retry.current = null;
       if (answer.status !== 'pending') {
@@ -122,7 +123,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       return false;
     }
   }
-  async function regenerate(message: Message) {
+  async function regenerate(message: Message, model = message.model || 'gemini-flash') {
     if (!id || submission.current) return;
     submission.current = true;
     setBusy(true);
@@ -131,7 +132,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       const answer = await api<Message>(
         `/conversations/${id}/messages/${message.id}/regenerate`,
         'POST',
-        { request_id: crypto.randomUUID() },
+        { request_id: crypto.randomUUID(), model },
       );
       await generate(answer, id);
     } catch (failure) {

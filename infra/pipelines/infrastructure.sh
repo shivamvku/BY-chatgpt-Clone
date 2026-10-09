@@ -12,7 +12,6 @@ esac
 if [[ "$STACK" == foundation ]]; then
   export TF_VAR_budget="$(python3 infra/pipelines/configure-budget.py)"
   [[ -n "$TF_VAR_budget" ]] || { echo 'Budget policy could not be loaded' >&2; exit 1; }
-  python3 infra/pipelines/check-ai.py
   python3 infra/pipelines/check-db-access.py
 else
   python3 infra/pipelines/show-dns.py

@@ -1,50 +1,68 @@
 import { useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import {
   Alert,
   Box,
-  Button,
   IconButton,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
+import Add from '@mui/icons-material/Add';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import MicNoneOutlined from '@mui/icons-material/MicNoneOutlined';
 import StopRounded from '@mui/icons-material/StopRounded';
-import AttachFile from '@mui/icons-material/AttachFile';
-import type { FormEvent } from 'react';
 import { request } from '../../shared/api';
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: (event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void;
+  onend: () => void;
+  onerror: () => void;
+};
 
 export function Composer({
   busy,
   canStop,
   enabled,
+  models,
+  model,
+  onModelChange,
   onSend,
   onStop,
 }: {
   busy: boolean;
   canStop: boolean;
   enabled: boolean;
+  models: { id: string; name: string; available: boolean }[];
+  model: string;
+  onModelChange: (model: string) => void;
   onSend: (content: string) => Promise<boolean>;
   onStop: () => void;
 }) {
   const [text, setText] = useState(''),
     [uploading, setUploading] = useState(false),
+    [listening, setListening] = useState(false),
     [error, setError] = useState('');
-  const fileInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null),
+    recognition = useRef<SpeechRecognitionLike | null>(null);
+  const selected = models.find((item) => item.id === model);
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (!text.trim() || busy || !enabled || uploading) return;
-    const value = text;
-    if (await onSend(value)) setText('');
+    if (!text.trim() || busy || !enabled || uploading || !selected?.available) return;
+    if (await onSend(text)) setText('');
   }
   async function upload(file?: File) {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Choose an image under 2 MB.');
-      return;
-    }
+    if (file.size > 2 * 1024 * 1024) return setError('Choose an image under 2 MB.');
     setUploading(true);
     setError('');
     try {
@@ -62,51 +80,78 @@ export function Composer({
       if (fileInput.current) fileInput.current.value = '';
     }
   }
+  function dictate() {
+    const windowWithSpeech = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const Recognition =
+      windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
+    if (!Recognition) return setError('Voice input is not supported by this browser.');
+    if (listening) return recognition.current?.stop();
+    const instance = new Recognition();
+    recognition.current = instance;
+    instance.lang = navigator.language || 'en-US';
+    instance.interimResults = false;
+    instance.continuous = false;
+    instance.onresult = (event) =>
+      setText((value) => `${value}${value ? ' ' : ''}${event.results[0][0].transcript}`);
+    instance.onend = () => setListening(false);
+    instance.onerror = () => {
+      setListening(false);
+      setError('Voice input could not be completed.');
+    };
+    setListening(true);
+    instance.start();
+  }
   return (
     <Box>
       {!enabled && (
         <Alert severity="info" sx={{ mb: 1 }}>
-          You can draft a message, but sending is unavailable until an Azure AI model is configured.
+          Chat is unavailable until an administrator configures an AI provider.
         </Alert>
       )}
       {error && (
-        <Alert severity="error" onClose={() => setError('')}>
+        <Alert severity="error" onClose={() => setError('')} sx={{ mb: 1 }}>
           {error}
         </Alert>
       )}
-      <Paper component="form" onSubmit={submit} variant="outlined" sx={{ p: 1.5, borderRadius: 4 }}>
+      <Paper
+        component="form"
+        onSubmit={submit}
+        elevation={0}
+        variant="outlined"
+        sx={{ p: 1.25, borderRadius: 4, boxShadow: '0 8px 28px rgba(0,0,0,.06)' }}
+      >
         <TextField
           fullWidth
           multiline
-          minRows={1}
-          maxRows={7}
-          placeholder="Ask YounderChat anything…"
+          minRows={2}
+          maxRows={8}
+          placeholder="Message YounderChat"
           aria-label="Message"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(event) => setText(event.target.value)}
           disabled={busy}
           inputProps={{ maxLength: 12000, 'aria-label': 'Message' }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
               void submit();
             }
           }}
-          sx={{
-            '& fieldset': { border: 0 },
-            '& .MuiInputBase-root': { p: 0.5 },
-          }}
+          sx={{ '& fieldset': { border: 0 }, '& .MuiInputBase-root': { p: 0.75 } }}
         />
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Tooltip title="Attach an image (display-only)">
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
+          <Stack direction="row" alignItems="center" gap={0.5}>
+            <Tooltip title="Add image">
               <span>
                 <IconButton
-                  aria-label="Attach image"
-                  disabled={busy || uploading || !enabled}
+                  aria-label="Add image"
+                  disabled={busy || uploading}
                   onClick={() => fileInput.current?.click()}
                 >
-                  <AttachFile />
+                  <Add />
                 </IconButton>
               </span>
             </Tooltip>
@@ -115,26 +160,45 @@ export function Composer({
               type="file"
               hidden
               accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => void upload(e.target.files?.[0])}
+              onChange={(event) => void upload(event.target.files?.[0])}
             />
-            <Typography component="span" variant="caption" color="text.secondary">
-              {uploading ? 'Uploading…' : 'Shift + Enter for a new line'}
-            </Typography>
-          </Box>
-          {busy ? (
-            <Button
-              variant="contained"
-              startIcon={<StopRounded />}
-              disabled={!canStop}
-              onClick={onStop}
+            <Tooltip title={listening ? 'Stop voice input' : 'Dictate message'}>
+              <span>
+                <IconButton
+                  aria-label="Voice input"
+                  disabled={busy}
+                  color={listening ? 'primary' : 'default'}
+                  onClick={dictate}
+                >
+                  <MicNoneOutlined />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Select
+              value={model}
+              size="small"
+              disabled={busy}
+              onChange={(event) => onModelChange(event.target.value)}
+              inputProps={{ 'aria-label': 'AI model' }}
+              sx={{ minWidth: 170 }}
             >
-              {canStop ? 'Stop' : 'Sending…'}
-            </Button>
+              {models.map((item) => (
+                <MenuItem key={item.id} value={item.id} disabled={!item.available}>
+                  {item.name}
+                  {!item.available ? ' (unavailable)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
+          {busy ? (
+            <IconButton aria-label="Stop" color="primary" onClick={onStop} disabled={!canStop}>
+              <StopRounded />
+            </IconButton>
           ) : (
             <IconButton
               aria-label="Send message"
               type="submit"
-              disabled={!text.trim() || !enabled || uploading}
+              disabled={!text.trim() || !enabled || uploading || !selected?.available}
               sx={{
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
@@ -153,8 +217,8 @@ export function Composer({
         display="block"
         mt={1}
       >
-        AI can make mistakes. Check important information. Images are stored privately and
-        displayed; the model cannot see them.
+        AI can make mistakes. Check important information. Uploaded images are private and are not
+        sent to the model.
       </Typography>
     </Box>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -48,12 +48,13 @@ export function History({
       element: HTMLElement;
       row: Conversation;
     } | null>(null);
+  const deferredSearch = useDeferredValue(search);
   const history = useInfiniteQuery({
-    queryKey: ['history', search, archived],
+    queryKey: ['history', deferredSearch, archived],
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
       api<Page<Conversation>>(
-        `/conversations?q=${encodeURIComponent(search)}&archived=${archived}&cursor=${encodeURIComponent(pageParam)}`,
+        `/conversations?q=${encodeURIComponent(deferredSearch)}&archived=${archived}&cursor=${encodeURIComponent(pageParam)}`,
       ),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
   });
@@ -123,7 +124,7 @@ export function History({
         </List>
         {!history.isPending && !history.data?.pages[0].items.length && (
           <Typography variant="body2" color="text.secondary" px={1}>
-            No conversations yet.
+            {search ? 'No conversations match your search.' : 'No conversations yet.'}
           </Typography>
         )}
         {history.hasNextPage && (

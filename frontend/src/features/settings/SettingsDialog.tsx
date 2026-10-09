@@ -53,6 +53,10 @@ interface StoredImage {
 
 function GeneralSection() {
   const { user, updateUser } = useAuth();
+  const subscription = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api<Subscription>('/subscription'),
+  });
   const appearance = useAppearance();
   const [name, setName] = useState(user?.name || ''),
     [bio, setBio] = useState(user?.bio || ''),
@@ -141,6 +145,17 @@ function GeneralSection() {
           label="Role"
           control={
             <Chip size="small" label={user?.role === 'admin' ? 'Administrator' : 'Member'} />
+          }
+        />
+        <SettingRow
+          label="Plan"
+          control={
+            <Chip
+              size="small"
+              color="primary"
+              variant="outlined"
+              label={subscription.data?.plan_name || 'Loading plan…'}
+            />
           }
         />
         <SettingRow
