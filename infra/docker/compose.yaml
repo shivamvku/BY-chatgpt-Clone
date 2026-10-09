@@ -20,6 +20,12 @@ services:
       dockerfile: infra/docker/Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://chat:local-development-only@database:5432/chat
+      APP_ENV: development
+      ALLOWED_ORIGINS: http://localhost:8000,http://localhost:5173
+      LLM_ENDPOINT: ${LLM_ENDPOINT:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    command: ["sh", "-c", "python -m app.db.migrate && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

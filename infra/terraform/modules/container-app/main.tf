@@ -36,6 +36,13 @@ resource "azurerm_container_app" "this" {
       image  = var.image
       cpu    = 0.5
       memory = "1Gi"
+      dynamic "env" {
+        for_each = var.app_config
+        content {
+          name  = upper(env.key)
+          value = env.value
+        }
+      }
       env {
         name        = "DATABASE_URL"
         secret_name = "database-url"

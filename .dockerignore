@@ -18,3 +18,10 @@
 **/*.key
 **/*.pfx
 **/*.p12
+**/test-results
+**/playwright-report
+**/.pytest_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+backend/tests
+frontend/e2e

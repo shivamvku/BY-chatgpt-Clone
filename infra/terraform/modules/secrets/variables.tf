@@ -29,3 +29,8 @@ variable "database_url" {
   type      = string
   sensitive = true
 }
+variable "runtime_database_url" {
+  type      = string
+  sensitive = true
+}
+variable "migration_principal_id" { type = string }

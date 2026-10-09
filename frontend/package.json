@@ -1,6 +1,44 @@
 {
-  "name": "by-chat-frontend", "private": true, "version": "0.1.0", "type": "module",
-  "scripts": {"dev": "vite --host 0.0.0.0", "build": "tsc -b && vite build", "preview": "vite preview"},
-  "dependencies": {"react": "^19.0.0", "react-dom": "^19.0.0", "@mui/material": "^7.0.0", "@mui/icons-material": "^7.0.0", "@emotion/react": "^11.14.0", "@emotion/styled": "^11.14.0", "@tanstack/react-query": "^5.0.0", "zustand": "^5.0.0"},
-  "devDependencies": {"typescript": "~5.8.3", "vite": "^6.3.0", "@vitejs/plugin-react": "^4.4.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "@types/node": "^22.0.0"}
+  "name": "by-chat-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --exclude e2e/**",
+    "test:e2e": "playwright test",
+    "format": "prettier --write src e2e *.ts",
+    "format:check": "prettier --check src e2e *.ts",
+    "lint": "eslint src e2e *.ts"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.10.1",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^6.3.0",
+    "vitest": "^5.0.3"
+  }
 }

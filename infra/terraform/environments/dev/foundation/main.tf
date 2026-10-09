@@ -30,6 +30,18 @@ module "identity" {
   resource_group_name = var.resource_group_name
   tags                = local.tags
 }
+module "migration_identity" {
+  source              = "../../../modules/identity"
+  name                = "${var.name}-migration"
+  location            = local.location
+  resource_group_name = var.resource_group_name
+  tags                = local.tags
+}
+resource "azurerm_role_assignment" "migration_pull" {
+  scope                = module.registry.id
+  role_definition_name = "AcrPull"
+  principal_id         = module.migration_identity.principal_id
+}
 
 module "monitoring" {
   source              = "../../../modules/monitoring"
@@ -62,17 +74,19 @@ module "database" {
 }
 
 module "secrets" {
-  source                = "../../../modules/secrets"
-  name                  = "bychat-${random_string.suffix.result}-kv"
-  location              = local.location
-  resource_group_name   = var.resource_group_name
-  tags                  = local.tags
-  tenant_id             = data.azurerm_client_config.current.tenant_id
-  deploy_principal_id   = var.deploy_principal_id
-  operator_principal_id = var.operator_principal_id
-  plan_principal_id     = var.plan_principal_id
-  runtime_principal_id  = module.identity.principal_id
-  database_url          = module.database.connection_url
+  source                 = "../../../modules/secrets"
+  name                   = "bychat-${random_string.suffix.result}-kv"
+  location               = local.location
+  resource_group_name    = var.resource_group_name
+  tags                   = local.tags
+  tenant_id              = data.azurerm_client_config.current.tenant_id
+  deploy_principal_id    = var.deploy_principal_id
+  operator_principal_id  = var.operator_principal_id
+  plan_principal_id      = var.plan_principal_id
+  runtime_principal_id   = module.identity.principal_id
+  database_url           = module.database.connection_url
+  runtime_database_url   = module.database.runtime_connection_url
+  migration_principal_id = module.migration_identity.principal_id
 }
 
 module "container_environment" {

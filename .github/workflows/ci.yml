@@ -9,6 +9,19 @@ jobs:
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_USER: chat
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: younderchat_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U chat -d younderchat_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://chat:test-only-password@localhost:5432/younderchat_test
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -28,7 +41,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci && npm run build
+      - run: npm ci && npm run lint && npm run format:check && npm run test && npm run build
         working-directory: frontend
   terraform:
     name: Terraform fmt, validate and tests

@@ -22,8 +22,14 @@ module "app" {
   environment_id      = local.platform.environment_id
   identity_id         = local.platform.identity_id
   registry_server     = local.platform.registry_server
-  database_secret_id  = local.platform.database_secret_id
+  database_secret_id  = local.platform.runtime_database_secret_id
   tags                = local.platform.tags
   image               = var.image
+  app_config = merge(jsondecode(file("${path.module}/../../../../config/app.json")), {
+    allowed_origins = "${jsondecode(file("${path.module}/../../../../config/app.json")).allowed_origins},https://${local.platform.name}.${local.platform.environment_domain}"
+    llm_endpoint    = local.platform.llm_endpoint
+    llm_model       = local.platform.llm_model
+    azure_client_id = local.platform.azure_client_id
+  })
 }
 output "url" { value = module.app.url }

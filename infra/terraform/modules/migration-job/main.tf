@@ -30,13 +30,22 @@ resource "azurerm_container_app_job" "migrations" {
       image   = var.image
       cpu     = 0.5
       memory  = "1Gi"
-      command = ["alembic"]
-      args    = ["upgrade", "head"]
+      command = ["python"]
+      args    = ["-m", "app.db.migrate"]
       env {
         name        = "DATABASE_URL"
         secret_name = "database-url"
       }
+      env {
+        name        = "RUNTIME_DATABASE_URL"
+        secret_name = "runtime-database-url"
+      }
     }
+  }
+  secret {
+    name                = "runtime-database-url"
+    identity            = var.identity_id
+    key_vault_secret_id = var.runtime_database_secret_id
   }
 }
 

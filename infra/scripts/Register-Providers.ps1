@@ -11,7 +11,8 @@ param(
         'Microsoft.ManagedIdentity',
         'Microsoft.Insights',
         'Microsoft.Consumption',
-        'Microsoft.BillingBenefits'
+        'Microsoft.BillingBenefits',
+        'Microsoft.CognitiveServices'
     )
 )
 $ErrorActionPreference = 'Stop'

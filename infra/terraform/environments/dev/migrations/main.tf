@@ -15,15 +15,16 @@ data "terraform_remote_state" "foundation" {
 }
 locals { platform = data.terraform_remote_state.foundation.outputs.application }
 module "migration" {
-  source              = "../../../modules/migration-job"
-  name                = local.platform.name
-  location            = local.platform.location
-  resource_group_name = local.platform.resource_group_name
-  environment_id      = local.platform.environment_id
-  identity_id         = local.platform.identity_id
-  registry_server     = local.platform.registry_server
-  database_secret_id  = local.platform.database_secret_id
-  tags                = local.platform.tags
-  image               = var.image
+  source                     = "../../../modules/migration-job"
+  name                       = local.platform.name
+  location                   = local.platform.location
+  resource_group_name        = local.platform.resource_group_name
+  environment_id             = local.platform.environment_id
+  identity_id                = local.platform.migration_identity_id
+  registry_server            = local.platform.registry_server
+  database_secret_id         = local.platform.database_secret_id
+  runtime_database_secret_id = local.platform.runtime_database_secret_id
+  tags                       = local.platform.tags
+  image                      = var.image
 }
 output "migration_job_name" { value = module.migration.name }
