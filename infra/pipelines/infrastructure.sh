@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 case "${STACK:?}" in foundation|domains) ;; *) echo 'Invalid stack' >&2; exit 1;; esac
-case "${ACTION:?}" in plan|apply) ;; *) echo 'Invalid action' >&2; exit 1;; esac
+case "${ACTION:?}" in
+  start-db-access|stop-db-access)
+    [[ "$STACK" == foundation ]] || { echo 'VM power operations require foundation' >&2; exit 1; }
+    bash infra/pipelines/db-access-power.sh "$ACTION"
+    exit 0;;
+  plan|apply) ;;
+  *) echo 'Invalid action' >&2; exit 1;;
+esac
 if [[ "$STACK" == foundation ]]; then
   export TF_VAR_budget="$(python3 infra/pipelines/configure-budget.py)"
   [[ -n "$TF_VAR_budget" ]] || { echo 'Budget policy could not be loaded' >&2; exit 1; }

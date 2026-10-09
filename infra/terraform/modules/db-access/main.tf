@@ -77,7 +77,7 @@ resource "azurerm_linux_virtual_machine" "ssh" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts-gen2"
+    sku       = var.image_sku
     version   = "latest"
   }
   lifecycle {
@@ -98,3 +98,13 @@ resource "azurerm_dev_test_global_vm_shutdown_schedule" "ssh" {
   tags = var.tags
 }
 output "ssh_host" { value = azurerm_public_ip.ssh.ip_address }
+resource "azurerm_virtual_machine_extension" "host_key" {
+  name                       = "ssh-host-key"
+  virtual_machine_id         = azurerm_linux_virtual_machine.ssh.id
+  publisher                  = "Microsoft.Azure.Extensions"
+  type                       = "CustomScript"
+  type_handler_version       = "2.1"
+  auto_upgrade_minor_version = true
+  settings                   = jsonencode({ commandToExecute = "ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub" })
+  tags                       = var.tags
+}

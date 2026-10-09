@@ -19,6 +19,8 @@ name: Infrastructure
         options:
           - plan
           - apply
+          - start-db-access
+          - stop-db-access
         default: plan
 permissions:
   contents: read
@@ -30,7 +32,7 @@ concurrency:
 env:
   ARM_USE_OIDC: "true"
   ARM_USE_AZUREAD: "true"
-  ARM_CLIENT_ID: ${{ inputs.action == 'apply' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
+  ARM_CLIENT_ID: ${{ inputs.action != 'plan' && github.event_name == 'workflow_dispatch' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
   ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
   TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
@@ -62,7 +64,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
+    environment: ${{ inputs.action != 'plan' && 'infra-deploy' || 'infra-plan' }}
     permissions:
       contents: read
       id-token: write
@@ -78,7 +80,7 @@ jobs:
       - run: bash infra/pipelines/infrastructure.sh
   verify:
     name: 3 · Verify infrastructure
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.action == 'apply' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.action != 'plan' }}
     needs: provision
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -89,6 +91,7 @@ jobs:
     env:
       STACK: ${{ inputs.stack }}
       AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME }}
+      ACTION: ${{ inputs.action }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./infra/actions/azure
