@@ -73,7 +73,7 @@ export default function ChatWorkspace() {
     } else {
       scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [chat.messages.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chat.messages.data]);
 
   useEffect(() => {
     if (models.data?.models.some((item) => item.id === model && item.available)) return;
