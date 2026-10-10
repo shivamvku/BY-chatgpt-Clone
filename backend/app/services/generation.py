@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import time
 
 import anyio
@@ -12,6 +13,8 @@ from app.db.session import get_engine
 from app.models.entities import Conversation, Message, UsageEvent, now
 from app.services import provider
 from app.services.conversations import context_messages, owned
+
+logger = logging.getLogger(__name__)
 
 
 def claim(user_id: str, message_id: str) -> tuple[list[dict[str, str]], str]:
@@ -113,7 +116,13 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                 yield event("delta", {"text": delta})
     except asyncio.CancelledError:
         raise
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "AI generation failed model_id=%s error_type=%s provider_status=%s",
+            model_id,
+            type(exc).__name__,
+            getattr(getattr(exc, "response", None), "status_code", None),
+        )
         await asyncio.to_thread(persist, message_id, content, "failed")
         finished = True
         yield event(
