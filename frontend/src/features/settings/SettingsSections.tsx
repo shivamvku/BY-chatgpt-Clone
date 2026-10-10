@@ -20,7 +20,7 @@ import { SubscriptionPanel, UsageEventsPanel } from './SubscriptionPanel';
 import { PasswordSettings } from './PasswordSettings';
 import { SectionCard, SettingRow } from './SectionCard';
 
-function GeneralSection() {
+export function GeneralSection() {
   const { user, updateUser } = useAuth();
   const subscription = useQuery({
     queryKey: ['subscription'],
@@ -140,7 +140,7 @@ function GeneralSection() {
   );
 }
 
-function AppearanceSection() {
+export function AppearanceSection() {
   const [error, setError] = useState('');
   return (
     <>
@@ -159,7 +159,7 @@ function AppearanceSection() {
   );
 }
 
-function PlanSection() {
+export function PlanSection() {
   const usage = useQuery({ queryKey: ['usage'], queryFn: () => api<Usage>('/usage') });
   const requestShare = usage.data
     ? Math.min(100, Math.round((usage.data.requests / Math.max(1, usage.data.request_limit)) * 100))
@@ -214,7 +214,7 @@ function PlanSection() {
   );
 }
 
-function DataSection() {
+export function DataSection() {
   const queries = useQueryClient();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -275,7 +275,7 @@ function DataSection() {
   );
 }
 
-function SecuritySection({ signOut, busy }: { signOut: (all: boolean) => void; busy: boolean }) {
+export function SecuritySection({ signOut, busy }: { signOut: (all: boolean) => void; busy: boolean }) {
   const sessions = useQuery({
     queryKey: ['sessions'],
     queryFn: () => api<SessionView[]>('/auth/sessions'),
