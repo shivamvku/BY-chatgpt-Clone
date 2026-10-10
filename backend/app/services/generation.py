@@ -1,8 +1,10 @@
 import asyncio
 import json
+import logging
 import time
 
 import anyio
+import httpx
 from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -12,6 +14,35 @@ from app.db.session import get_engine
 from app.models.entities import Conversation, Message, UsageEvent, now
 from app.services import provider
 from app.services.conversations import context_messages, owned
+
+logger = logging.getLogger(__name__)
+
+
+def _failure_message(exc: Exception) -> str:
+    """Return actionable, credential-safe provider errors to the chat client."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status in {401, 403}:
+        return (
+            "The AI provider rejected its API key or model access. "
+            "Check the provider credentials and model permissions."
+        )
+    if status == 404:
+        return (
+            "The selected AI model is no longer available. Choose another model "
+            "or update the provider model configuration."
+        )
+    if status == 429:
+        return "The AI provider rate limit or quota was reached. Retry shortly."
+    if status is not None and status >= 500:
+        return "The AI provider is temporarily unavailable. Retry shortly."
+    if isinstance(exc, (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException)):
+        return "The AI provider timed out. Retry shortly."
+    if status is not None and status >= 400:
+        return (
+            "The AI provider rejected the request. "
+            "Check the model ID and provider configuration."
+        )
+    return "AI response failed. Retry when the provider is available."
 
 
 def claim(user_id: str, message_id: str) -> tuple[list[dict[str, str]], str]:
@@ -113,12 +144,16 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                 yield event("delta", {"text": delta})
     except asyncio.CancelledError:
         raise
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "AI generation failed model_id=%s error_type=%s provider_status=%s",
+            model_id,
+            type(exc).__name__,
+            getattr(getattr(exc, "response", None), "status_code", None),
+        )
         await asyncio.to_thread(persist, message_id, content, "failed")
         finished = True
-        yield event(
-            "error", {"message": "AI response failed. Retry when the provider is available."}
-        )
+        yield event("error", {"message": _failure_message(exc)})
     finally:
         # ASGI disconnect cancels the request scope; final state must still reach PostgreSQL.
         with anyio.CancelScope(shield=True):

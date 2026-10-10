@@ -16,35 +16,35 @@ DEFAULT_MODEL = "gemini-flash"
 
 MODELS: dict[str, dict] = {
     "gemini-flash": {
-        "name": "Gemini 2.5 Flash",
+        "name": "Gemini 3.5 Flash-Lite",
         "provider": "gemini",
         "plans": {"basic", "pro", "pro_max"},
         "priority": 10,
-        "api_model": "gemini-2.5-flash",
+        "api_model": "gemini-3.5-flash-lite",
         "supports_images": True,
     },
     "gemini-pro": {
-        "name": "Gemini 1.5 Pro",
+        "name": "Gemini 3.8 Flash",
         "provider": "gemini", 
         "plans": {"basic", "pro", "pro_max"},
         "priority": 15,
-        "api_model": "gemini-1.5-pro",
+        "api_model": "gemini-3.8-flash",
         "supports_images": True,
     },
     "groq-fast": {
-        "name": "Groq · Llama 3.1 70B",
+        "name": "Groq · GPT-OSS 120B",
         "provider": "groq",
         "plans": {"basic", "pro", "pro_max"},
         "priority": 20,
-        "api_model": "llama-3.1-70b-versatile",
+        "api_model": "openai/gpt-oss-120b",
         "supports_images": False,
     },
     "groq-mixtral": {
-        "name": "Groq · Mixtral 8x7B",
+        "name": "Groq · Qwen 3.8 27B",
         "provider": "groq",
         "plans": {"basic", "pro", "pro_max"},
         "priority": 25,
-        "api_model": "mixtral-8x7b-32768",
+        "api_model": "qwen/qwen3.8-27b",
         "supports_images": False,
     },
 }
@@ -57,7 +57,7 @@ _LEGACY_ALIAS: dict[str, str] = {
     "gemini-3.7-flash": "gemini-flash",
     "gemini-3.8-flash": "gemini-flash",
     "gemini-3.1-flash-lite": "gemini-flash",
-    "groq-qwen3-27b": "groq-fast",
+    "groq-qwen3-27b": "groq-mixtral",
     "groq-gpt-oss-120b": "groq-fast",
     "groq-gpt-oss-20b": "groq-fast",
     # Any stored 'auto' model messages fall back to the default Gemini model
