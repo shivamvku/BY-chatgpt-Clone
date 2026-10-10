@@ -43,6 +43,10 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
     // immediately would wipe the optimistic entry and cause a loading flash.
     // The finally block below does the post-stream refresh.
     try {
+      // Selecting a newly-created conversation starts a messages query. Cancel that
+      // in-flight read before streaming so stale server/cache data cannot overwrite
+      // the optimistic rows while deltas are arriving.
+      await queries.cancelQueries({ queryKey: key });
       await streamResponse(answer.id, controller.current.signal, (kind, value) => {
         if (kind === 'error') {
           setError(value.message);
@@ -145,7 +149,9 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
         // active conversation so the UI never flashes a loading spinner.
         const now = Date.now();
         const optimisticUser: Message = {
-          id: crypto.randomUUID(),
+          // The backend has already persisted the prompt; reuse its real ID so
+          // the post-stream refetch cannot create a duplicate optimistic row.
+          id: answer.parent_id || crypto.randomUUID(),
           role: 'user',
           content,
           status: 'complete',
@@ -154,7 +160,8 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
           created_at: now,
           updated_at: now,
         };
-        queries.setQueryData<Message[]>(['messages', conversationId], [optimisticUser]);
+        const assistantPlaceholder: Message = { ...answer, content: '' };
+        queries.setQueryData<Message[]>(['messages', conversationId], [optimisticUser, assistantPlaceholder]);
         select(conversationId);
       } else {
         // For existing conversations, optimistically append the new user
@@ -167,7 +174,8 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
           // Avoid duplicates if the message is already in cache (idempotency retry)
           if (existing.some((r) => r.id === answer.id)) return existing;
           const userMsg: Message = {
-            id: crypto.randomUUID(),
+            // Match the persisted user prompt ID returned through the assistant's parent.
+            id: answer.parent_id || crypto.randomUUID(),
             role: 'user',
             content,
             status: 'complete',
@@ -180,7 +188,10 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
             ...answer,
             content: '',
           };
-          return [...existing, userMsg, assistantPlaceholder];
+          // Replace any optimistic/persisted copy of this prompt rather than
+          // appending a second row if the history request raced with submission.
+          const withoutPrompt = existing.filter((row) => row.id !== userMsg.id);
+          return [...withoutPrompt, userMsg, assistantPlaceholder];
         });
       }
 
