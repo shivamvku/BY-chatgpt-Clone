@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -25,6 +24,8 @@ import Search from '@mui/icons-material/Search';
 import MoreHoriz from '@mui/icons-material/MoreHoriz';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
+import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined';
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutline';
 import { api } from '../../shared/api';
 import type { Conversation, Page, Usage } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
@@ -79,11 +80,33 @@ export function History({
     getNextPageParam: (page) => page.next_cursor ?? undefined,
   });
   return (
-    <Stack height="100%" p={2} gap={2} bgcolor="background.paper">
-      <Typography variant="h6" fontWeight={800} color="primary" px={1} py={1}>
-        YounderChat
-      </Typography>
-      <Button variant="contained" startIcon={<Add />} disabled={disabled} onClick={onNew}>
+    <Stack height="100%" p={2} gap={1.5} bgcolor="background.paper">
+      <Stack direction="row" alignItems="center" gap={1} px={0.75} py={1}>
+        <Box
+          aria-hidden="true"
+          sx={{
+            display: 'grid',
+            placeItems: 'center',
+            width: 30,
+            height: 30,
+            borderRadius: 1.5,
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+          }}
+        >
+          <ChatBubbleOutline fontSize="small" />
+        </Box>
+        <Typography variant="h6" fontWeight={800} color="primary">
+          YounderChat
+        </Typography>
+      </Stack>
+      <Button
+        variant="contained"
+        startIcon={<Add />}
+        disabled={disabled}
+        onClick={onNew}
+        sx={{ borderRadius: 2.5, py: 1, fontWeight: 700 }}
+      >
         New conversation
       </Button>
       <TextField
@@ -98,12 +121,18 @@ export function History({
             </InputAdornment>
           ),
         }}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
       />
-      <Button size="small" onClick={() => setArchived((value) => !value)}>
+      <Button
+        size="small"
+        startIcon={<ArchiveOutlined fontSize="small" />}
+        onClick={() => setArchived((value) => !value)}
+        sx={{ justifyContent: 'flex-start', px: 1, color: 'text.secondary', fontWeight: 600 }}
+      >
         {archived ? 'Show active conversations' : 'Show archived conversations'}
       </Button>
-      <Box flex={1} overflow="auto">
-        <Typography variant="overline" color="text.secondary" px={1}>
+      <Box flex={1} overflow="auto" sx={{ mx: -0.5, px: 0.5 }}>
+        <Typography variant="overline" color="text.secondary" px={1} fontWeight={700}>
           {archived ? 'Archived' : 'Your conversations'}
         </Typography>
         {history.isError && (
@@ -142,6 +171,7 @@ export function History({
                 sx={{
                   '& .action-btn': { opacity: 0, transition: 'opacity 0.15s' },
                   '&:hover .action-btn, &:focus-within .action-btn': { opacity: 1 },
+                  mb: 0.25,
                 }}
               >
                 <ListItemButton
@@ -151,14 +181,20 @@ export function History({
                   sx={{
                     borderRadius: 2,
                     pr: 5,
+                    minHeight: 42,
+                    '&:hover': { bgcolor: 'action.hover' },
                     '&.Mui-selected': {
-                      borderLeft: '3px solid',
-                      borderColor: 'primary.main',
-                      pl: 1.625,
+                      bgcolor: 'primary.light',
+                      color: 'primary.dark',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: 'primary.light' },
                     },
                   }}
                 >
-                  <ListItemText primary={row.title} primaryTypographyProps={{ noWrap: true }} />
+                  <ListItemText
+                    primary={row.title}
+                    primaryTypographyProps={{ noWrap: true, fontSize: '0.875rem' }}
+                  />
                 </ListItemButton>
               </ListItem>
             ))}
@@ -177,52 +213,55 @@ export function History({
           </Button>
         )}
       </Box>
-      <Divider />
-      {usage.data && (
-        <Tooltip
-          title={`${usage.data.requests} / ${usage.data.request_limit} requests · ${Math.round(usage.data.reserved_tokens / 1000)}k / ${Math.round(usage.data.token_limit / 1000)}k tokens today`}
-          placement="top"
-        >
-          <Box sx={{ px: 1, pb: 0.5 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.25}>
-              <Typography variant="caption" color="text.secondary">
-                Daily usage
-              </Typography>
-              <Typography
-                variant="caption"
-                color={
-                  requestPct >= 90 ? 'error' : tokenPct >= 90 ? 'warning.main' : 'text.secondary'
-                }
-                fontWeight={600}
-              >
-                {Math.max(requestPct, tokenPct)}%
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={Math.max(requestPct, tokenPct)}
-              color={Math.max(requestPct, tokenPct) >= 90 ? 'error' : 'primary'}
-              sx={{ height: 3, borderRadius: 2 }}
-            />
-          </Box>
-        </Tooltip>
-      )}
-      <Button
-        startIcon={<SettingsOutlined />}
-        onClick={onSettings}
-        sx={{ justifyContent: 'flex-start' }}
-      >
-        {user?.name}
-      </Button>
-      {user?.role === 'admin' && (
+      <Box sx={{ pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
+        {usage.data && (
+          <Tooltip
+            title={`${usage.data.requests} / ${usage.data.request_limit} requests · ${Math.round(usage.data.reserved_tokens / 1000)}k / ${Math.round(usage.data.token_limit / 1000)}k tokens today`}
+            placement="top"
+          >
+            <Box sx={{ px: 1, pb: 1.25 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Daily usage
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color={
+                    requestPct >= 90 ? 'error' : tokenPct >= 90 ? 'warning.main' : 'text.secondary'
+                  }
+                  fontWeight={700}
+                >
+                  {Math.max(requestPct, tokenPct)}%
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={Math.max(requestPct, tokenPct)}
+                color={Math.max(requestPct, tokenPct) >= 90 ? 'error' : 'primary'}
+                sx={{ height: 4, borderRadius: 2 }}
+              />
+            </Box>
+          </Tooltip>
+        )}
         <Button
-          startIcon={<AdminPanelSettingsOutlined />}
-          onClick={onAdmin}
-          sx={{ justifyContent: 'flex-start' }}
+          fullWidth
+          startIcon={<SettingsOutlined />}
+          onClick={onSettings}
+          sx={{ justifyContent: 'flex-start', borderRadius: 2, px: 1 }}
         >
-          Admin
+          {user?.name}
         </Button>
-      )}
+        {user?.role === 'admin' && (
+          <Button
+            fullWidth
+            startIcon={<AdminPanelSettingsOutlined />}
+            onClick={onAdmin}
+            sx={{ justifyContent: 'flex-start', borderRadius: 2, px: 1 }}
+          >
+            Admin
+          </Button>
+        )}
+      </Box>
       <Menu open={!!menu} anchorEl={menu?.element} onClose={() => setMenu(null)}>
         {[
           'Rename',

@@ -1,4 +1,6 @@
+import base64
 import json
+import re
 from collections.abc import AsyncIterator
 
 import httpx
@@ -97,7 +99,7 @@ def resolve_auto(plan_id: str) -> str:
 # Provider implementations
 # ---------------------------------------------------------------------------
 
-async def _groq(messages: list[dict[str, str]], groq_model: str) -> AsyncIterator[str]:
+async def _groq(messages: list[dict], groq_model: str) -> AsyncIterator[str]:
     settings = get_settings()
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(60, connect=10), follow_redirects=False
@@ -135,16 +137,30 @@ async def _groq(messages: list[dict[str, str]], groq_model: str) -> AsyncIterato
                 raise ValueError("Provider stream ended before completion")
 
 
-async def _gemini(messages: list[dict[str, str]], gemini_model: str) -> AsyncIterator[str]:
+ATTACHMENT_MARKDOWN = re.compile(r"!\[[^\]]*\]\(/api/files/[0-9a-f-]{36}\)")
+
+
+async def _gemini(messages: list[dict], gemini_model: str) -> AsyncIterator[str]:
     settings = get_settings()
-    contents = [
-        {
-            "role": "model" if item["role"] == "assistant" else "user",
-            "parts": [{"text": item["content"]}],
-        }
-        for item in messages
-        if item["role"] != "system"
-    ]
+    contents = []
+    for item in messages:
+        if item["role"] == "system":
+            continue
+        text = ATTACHMENT_MARKDOWN.sub("[Attached image]", item["content"])
+        parts = [{"text": text}]
+        if item["role"] == "user":
+            parts.extend(
+                {
+                    "inline_data": {
+                        "mime_type": image["media_type"],
+                        "data": base64.b64encode(image["data"]).decode("ascii"),
+                    }
+                }
+                for image in item.get("images", [])
+            )
+        contents.append(
+            {"role": "model" if item["role"] == "assistant" else "user", "parts": parts}
+        )
     system = next((item["content"] for item in messages if item["role"] == "system"), "")
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(60, connect=10), follow_redirects=False
@@ -182,7 +198,7 @@ async def _gemini(messages: list[dict[str, str]], gemini_model: str) -> AsyncIte
 
 
 async def stream_completion(
-    messages: list[dict[str, str]], model_id: str
+    messages: list[dict], model_id: str
 ) -> AsyncIterator[str]:
     """Stream a completion. Resolves legacy aliases before dispatching."""
     canonical = _resolve(model_id)

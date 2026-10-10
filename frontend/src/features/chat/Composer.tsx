@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import Close from '@mui/icons-material/Close';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import MicNoneOutlined from '@mui/icons-material/MicNoneOutlined';
 import StopRounded from '@mui/icons-material/StopRounded';
@@ -35,6 +36,8 @@ type SpeechRecognitionLike = {
 };
 
 const MODEL_MENU_HEIGHT = 3 * 48 + 32;
+
+type UploadedImage = { id: string; name: string; url: string };
 
 /** Strip provider prefix for a compact button label. */
 function shortName(name: string): string {
@@ -64,6 +67,7 @@ export function Composer({
   onStop: () => void;
 }) {
   const [text, setText] = useState(''),
+    [images, setImages] = useState<UploadedImage[]>([]),
     [uploading, setUploading] = useState(false),
     [listening, setListening] = useState(false),
     [error, setError] = useState(''),
@@ -74,8 +78,17 @@ export function Composer({
 
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (!text.trim() || busy || !enabled || uploading || !selected?.available) return;
-    if (await onSend(text)) setText('');
+    if ((!text.trim() && !images.length) || busy || !enabled || uploading || !selected?.available) return;
+    if (images.length && selected.provider !== 'gemini') {
+      setError('Image analysis is available with Gemini. Select Gemini Flash to continue.');
+      return;
+    }
+    const attachments = images.map((image) => `![${image.name}](${image.url})`).join('\n');
+    const content = [text.trim(), attachments].filter(Boolean).join('\n\n');
+    if (await onSend(content)) {
+      setText('');
+      setImages([]);
+    }
   }
 
   async function upload(file?: File) {
@@ -90,7 +103,7 @@ export function Composer({
         headers: { 'Content-Type': file.type },
       });
       const image = await response.json();
-      setText((value) => `${value}\n![Attached image](${image.url})\n`);
+      setImages((value) => [...value, image]);
     } catch (failure) {
       setError((failure as Error).message);
     } finally {
@@ -174,6 +187,47 @@ export function Composer({
             '& textarea::placeholder': { color: 'text.secondary', opacity: 0.7 },
           }}
         />
+        {images.length > 0 && (
+          <Stack direction="row" gap={1} flexWrap="wrap" sx={{ px: 0.75, pt: 0.5 }}>
+            {images.map((image) => (
+              <Box
+                key={image.id}
+                sx={{
+                  position: 'relative',
+                  width: 76,
+                  height: 76,
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: 1,
+                  borderColor: 'divider',
+                  bgcolor: 'action.hover',
+                }}
+              >
+                <Box
+                  component="img"
+                  src={image.url}
+                  alt={image.name}
+                  sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+                <IconButton
+                  aria-label={`Remove ${image.name}`}
+                  size="small"
+                  onClick={() => setImages((value) => value.filter((item) => item.id !== image.id))}
+                  sx={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    bgcolor: 'rgba(0, 0, 0, 0.6)',
+                    color: 'common.white',
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' },
+                  }}
+                >
+                  <Close fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+          </Stack>
+        )}
         {text.length > 8000 && (
           <Typography
             variant="caption"
@@ -329,7 +383,7 @@ export function Composer({
                 aria-label="Send message"
                 type="submit"
                 size="small"
-                disabled={!text.trim() || !enabled || uploading || !selected?.available}
+                disabled={(!text.trim() && !images.length) || !enabled || uploading || !selected?.available}
                 sx={{
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
