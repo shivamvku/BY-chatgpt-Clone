@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { CssBaseline, ThemeProvider, useMediaQuery } from '@mui/material';
 import type { Appearance, Contrast } from '../shared/types';
 import { buildTheme } from './tokens';
@@ -30,14 +30,14 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const mode =
     preferences.appearance === 'system' ? (systemDark ? 'dark' : 'light') : preferences.appearance;
   const theme = useMemo(() => buildTheme(mode, preferences.contrast), [mode, preferences.contrast]);
-  const setPreferences = (value: Preferences) => {
+  const setPreferences = useCallback((value: Preferences) => {
     setState(value);
     try {
       localStorage.setItem('yc-appearance', JSON.stringify(value));
     } catch {
       /* Storage may be blocked. */
     }
-  };
+  }, []);
   return (
     <Context.Provider value={{ ...preferences, setPreferences }}>
       <ThemeProvider theme={theme}>
