@@ -10,7 +10,11 @@ export class ApiError extends Error {
     super(message);
   }
 }
-export async function request(path: string, init: RequestInit = {}): Promise<Response> {
+export async function request(
+  path: string,
+  init: RequestInit = {},
+  retryCsrf = true,
+): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.body && typeof init.body === 'string') headers.set('Content-Type', 'application/json');
   if (init.method && !['GET', 'HEAD'].includes(init.method)) headers.set('X-CSRF-Token', csrf);
@@ -23,6 +27,33 @@ export async function request(path: string, init: RequestInit = {}): Promise<Res
     const body = await response.json().catch(() => null);
     const message =
       typeof body?.detail === 'string' ? body.detail : 'Check your input and try again.';
+
+    // CSRF can become stale when another tab refreshes the shared cookie. The
+    // guard rejects the request before its endpoint runs, so refresh the token
+    // and replay this request once. Never retry other 403s or loop indefinitely.
+    if (
+      response.status === 403 &&
+      retryCsrf &&
+      (message === 'CSRF validation failed' || message === 'Session CSRF validation failed')
+    ) {
+      try {
+        const bootstrap = await fetch('/api/auth/session', {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (bootstrap.ok) {
+          const state = (await bootstrap.json()) as { csrf?: unknown };
+          if (typeof state.csrf === 'string' && state.csrf) {
+            setCsrf(state.csrf);
+            return request(path, init, false);
+          }
+        }
+      } catch {
+        // Preserve the original CSRF error if recovery itself is unavailable.
+      }
+    }
+
     // 401 errors are now handled by WebSocket, no need to dispatch events
     throw new ApiError(response.status, message);
   }
