@@ -44,7 +44,7 @@ DEFAULT_PLANS = (
 
 
 def provision_basic(db: Session, user: User) -> Subscription:
-    insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     for values in DEFAULT_PLANS:
         db.execute(insert(Plan).values(**values).on_conflict_do_nothing(index_elements=[Plan.id]))
     row = Subscription(owner_id=user.id, plan_id="basic")
@@ -153,4 +153,14 @@ def usage_history(db: Session, user_id: str, after: int = 0):
         .where(UsageEvent.user_id == user_id, UsageEvent.created_at >= after)
         .order_by(UsageEvent.created_at.desc(), UsageEvent.id)
         .limit(100)
+    ).all()
+
+
+def list_plans(db: Session):
+    return db.scalars(select(Plan).order_by(Plan.seats)).all()
+
+
+def list_audit(db: Session, after: str):
+    return db.scalars(
+        select(Audit).where(Audit.id > after).order_by(Audit.created_at.desc(), Audit.id).limit(100)
     ).all()

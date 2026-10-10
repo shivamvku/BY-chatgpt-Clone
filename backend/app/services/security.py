@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from fastapi import Depends, HTTPException, Request, Response
+from fastapi import Depends, HTTPException, Request, Response, WebSocket
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -31,7 +31,7 @@ def verify_password(encoded: str, password: str) -> bool:
 
 def rate_limit(db: Session, key: str, limit: int, seconds: int = 900):
     bucket_key = digest(f"{key}:{now() // seconds}")
-    insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     statement = insert(RateBucket).values(key=bucket_key, count=1, expires_at=now() + seconds)
     statement = statement.on_conflict_do_update(
         index_elements=[RateBucket.key], set_={"count": RateBucket.count + 1}
@@ -108,6 +108,42 @@ def csrf_cookie(response: Response, value: str):
         path="/",
         max_age=get_settings().session_days * 86400,
     )
+
+
+async def identity_from_websocket(websocket: WebSocket, db: Session) -> Identity | None:
+    """Extract identity from WebSocket connection (using cookies)."""
+    try:
+        # Get session token from cookies
+        token = websocket.cookies.get(get_settings().session_cookie, "")
+        if not token:
+            return None
+            
+        # Validate session using existing logic
+        session = db.get(LoginSession, digest(token))
+        if not session:
+            return None
+        if session.expires_at <= now():
+            db.delete(session)
+            db.commit()
+            return None
+        
+        user = db.get(User, session.user_id)
+        if not user or not user.active:
+            return None
+        
+        # Check idle timeout
+        if session.last_active_at <= now() - get_settings().session_idle_hours * 3600:
+            return None
+        
+        # Update last activity
+        if session.last_active_at < now() - 300:  # Update every 5 minutes
+            session.last_active_at = now()
+            db.commit()
+        
+        return Identity(user=user, session=session)
+        
+    except Exception:
+        return None
 
 
 def session_source(request: Request) -> str:

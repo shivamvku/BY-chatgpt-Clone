@@ -13,7 +13,11 @@ data "terraform_remote_state" "foundation" {
     use_azuread_auth     = true
   }
 }
-locals { platform = data.terraform_remote_state.foundation.outputs.application }
+locals {
+  platform     = data.terraform_remote_state.foundation.outputs.application
+  app_config   = jsondecode(file("${path.module}/../../../../config/app.json"))
+  email_config = jsondecode(file("${path.module}/../../../../config/email.json"))
+}
 module "app" {
   source              = "../../../modules/container-app"
   name                = local.platform.name
@@ -27,10 +31,10 @@ module "app" {
   groq_secret_id      = try(local.platform.groq_secret_id, "")
   tags                = local.platform.tags
   image               = var.image
-  app_config = merge(jsondecode(file("${path.module}/../../../../config/app.json")), {
-    allowed_origins = "${jsondecode(file("${path.module}/../../../../config/app.json")).allowed_origins},https://${local.platform.name}.${local.platform.environment_domain}"
-    public_url      = jsondecode(file("${path.module}/../../../../config/email.json")).public_url
-    email_from      = jsondecode(file("${path.module}/../../../../config/email.json")).enabled ? jsondecode(file("${path.module}/../../../../config/email.json")).from : ""
+  app_config = merge(local.app_config, {
+    allowed_origins = "${local.app_config.allowed_origins},https://${local.platform.name}.${local.platform.environment_domain}"
+    public_url      = local.email_config.public_url
+    email_from      = local.email_config.enabled ? local.email_config.from : ""
   })
 }
 output "url" { value = module.app.url }

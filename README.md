@@ -68,7 +68,7 @@ For browser tests, use an isolated development database, run migrations, start `
 
 ## Real model configuration
 
-Set `GEMINI_API_KEY` for Gemini 2.5 Flash and `GROQ_API_KEY` for Groq's Llama 3.3 70B model. Basic accounts can use Gemini; Pro and Pro Max accounts can choose either model. Use `.env` only for local development. Production keys are GitHub secrets delivered through Terraform to Azure Key Vault and then referenced by the Container App managed identity. Never put provider credentials in frontend configuration.
+Set `GEMINI_API_KEY` for Gemini 2.5 Flash and `GROQ_API_KEY` for Groq's GPT-OSS 20B model. Basic accounts can use Gemini; Pro and Pro Max accounts can choose either model. Use `.env` only for local development. Production keys are GitHub secrets delivered through Terraform to Azure Key Vault and then referenced by the Container App managed identity. Never put provider credentials in frontend configuration.
 
 Without a configured provider key, account and history functions remain available while that model is unavailable. Browser fixtures do not establish real inference verification.
 

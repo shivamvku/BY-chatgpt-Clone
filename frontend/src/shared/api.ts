@@ -23,7 +23,7 @@ export async function request(path: string, init: RequestInit = {}): Promise<Res
     const body = await response.json().catch(() => null);
     const message =
       typeof body?.detail === 'string' ? body.detail : 'Check your input and try again.';
-    if (response.status === 401) window.dispatchEvent(new Event('session-expired'));
+    // 401 errors are now handled by WebSocket, no need to dispatch events
     throw new ApiError(response.status, message);
   }
   return response;

@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import { api } from '../../shared/api';
-
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  owner: boolean;
-}
+import type { SubscriptionMember } from '../../shared/types';
 export function SeatPanel() {
   const queries = useQueryClient(),
     [email, setEmail] = useState(''),
@@ -17,7 +11,7 @@ export function SeatPanel() {
     [notice, setNotice] = useState('');
   const members = useQuery({
     queryKey: ['members'],
-    queryFn: () => api<Member[]>('/subscription/members'),
+    queryFn: () => api<SubscriptionMember[]>('/subscription/members'),
   });
   async function invite() {
     setBusy(true);

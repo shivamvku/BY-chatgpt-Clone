@@ -26,7 +26,7 @@ import WorkspacePremiumOutlined from '@mui/icons-material/WorkspacePremiumOutlin
 import StorageOutlined from '@mui/icons-material/StorageOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import { api } from '../../shared/api';
-import type { Subscription, Usage, User } from '../../shared/types';
+import type { SessionView, StoredImage, Subscription, Usage, User } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 import { useAppearance } from '../../theme/AppearanceProvider';
 import { AppearanceControls } from './AppearanceControls';
@@ -41,12 +41,6 @@ interface NavItem {
   label: string;
   hint: string;
   icon: ReactNode;
-}
-
-interface StoredImage {
-  id: string;
-  name: string;
-  size: number;
 }
 
 function GeneralSection() {
@@ -307,16 +301,7 @@ function DataSection() {
 function SecuritySection({ signOut, busy }: { signOut: (all: boolean) => void; busy: boolean }) {
   const sessions = useQuery({
     queryKey: ['sessions'],
-    queryFn: () =>
-      api<
-        {
-          created_at: number;
-          expires_at: number;
-          current: boolean;
-          source: string;
-          last_active_at: number;
-        }[]
-      >('/auth/sessions'),
+    queryFn: () => api<SessionView[]>('/auth/sessions'),
   });
   return (
     <>

@@ -27,6 +27,13 @@ class Notice(BaseModel):
     message: str
 
 
+class MemberView(BaseModel):
+    id: str
+    name: str
+    email: str
+    owner: bool
+
+
 class SubscriptionUpdate(BaseModel):
     plan: Literal["basic", "pro", "pro_max"]
     status: Literal["active", "suspended"] = "active"
