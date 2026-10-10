@@ -45,6 +45,10 @@ function SummaryCard({ label, value, icon }: { label: string; value: number; ico
 export function AdminPanel() {
   const { user } = useAuth();
   const queries = useQueryClient();
+  const summary = useQuery({
+    queryKey: ['admin-summary'],
+    queryFn: () => api<AdminSummary>('/admin/summary'),
+  });
   const [change, setChange] = useState<Change>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
