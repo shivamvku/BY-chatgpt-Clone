@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   Alert,
   Box,
@@ -46,7 +46,6 @@ export function History({
   onAction 
 }: HistoryProps) {
   const { user } = useAuth();
-  const queries = useQueryClient();
   
   const [search, setSearch] = useState('');
   const [archived, setArchived] = useState(false);

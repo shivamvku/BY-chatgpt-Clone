@@ -32,7 +32,7 @@ export function Composer({
   busy: boolean;
   canStop: boolean;
   enabled: boolean;
-  models: any;
+  models: { data?: { configured?: boolean; models?: Array<{ id: string; name: string; provider: string }> } };
   selectedModel: string;
   onModelChange: (modelId: string) => void;
   onSend: (content: string) => Promise<boolean>;
@@ -84,7 +84,7 @@ export function Composer({
       )}
       
       {/* Model Selection - ChatGPT Style */}
-      {models.data?.configured && models.data.models.length > 0 && (
+      {models.data?.configured && models.data?.models && models.data.models.length > 0 && (
         <Box mb={2} display="flex" justifyContent="center">
           <Button
             variant="outlined"
@@ -98,7 +98,7 @@ export function Composer({
               bgcolor: 'background.paper'
             }}
           >
-            {models.data.models.find((m: any) => m.id === selectedModel)?.name || 'Select Model'}
+            {models.data?.models?.find((m) => m.id === selectedModel)?.name || 'Select Model'}
           </Button>
           <Menu
             anchorEl={modelMenu}
@@ -110,7 +110,7 @@ export function Composer({
               sx: { borderRadius: 2, minWidth: 250 }
             }}
           >
-            {models.data.models.map((model: any) => (
+            {models.data?.models?.map((model) => (
               <MenuItem
                 key={model.id}
                 selected={model.id === selectedModel}

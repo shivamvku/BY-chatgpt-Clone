@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Box, Container, Stack } from '@mui/material';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -113,19 +113,6 @@ export default function ChatWorkspace() {
     }
   }, [dialog, active, newChat, queries]);
 
-  // Context value for components that need chat state
-  const chatContextValue = {
-    active,
-    selectedModel,
-    setSelectedModel,
-    chat,
-    models,
-    newChat,
-    selectConversation,
-    actionError,
-    setActionError,
-  };
-
   // Show admin page if admin is true
   if (admin && user?.role === 'admin') {
     return <AdminPage onBack={() => setAdmin(false)} />;
@@ -161,10 +148,7 @@ export default function ChatWorkspace() {
         {/* Main Chat */}
         <Panel defaultSize={80}>
           <Stack height="100dvh" bgcolor="background.default">
-            <ChatHeader 
-              user={user}
-              onAdminClick={() => setAdmin(true)}
-            />
+            <ChatHeader />
             
             <ChatMessages 
               chat={chat}

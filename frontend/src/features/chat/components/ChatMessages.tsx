@@ -11,10 +11,32 @@ import {
 } from '@mui/material';
 import { MessageCard } from '../MessageCard';
 import { visibleBranch } from '../branches';
+import type { Message } from '../../../shared/types';
 
 interface ChatMessagesProps {
-  chat: any;
-  models: any;
+  chat: {
+    busy: boolean;
+    error: string;
+    setError: (error: string) => void;
+    messages: {
+      data?: Message[];
+      isError: boolean;
+      isLoading: boolean;
+    };
+    leaf: string | null;
+    setLeaf: (leaf: string | null) => void;
+    send: (content: string, parentId: string | null) => Promise<boolean>;
+    regenerate: (row: Message) => Promise<void>;
+    stopMessage: (row: Message) => void;
+  };
+  models: {
+    data?: {
+      configured?: boolean;
+      models?: Array<{ id: string; name: string; provider: string }>;
+    };
+    isError: boolean;
+    refetch: () => void;
+  };
   selectedModel: string;
   active: string | null;
   actionError: string;
@@ -117,7 +139,7 @@ export function ChatMessages({
             </Typography>
             {selectedModel && (
               <Chip
-                label={`Using ${models.data?.models.find((m: any) => m.id === selectedModel)?.name}`}
+                label={`Using ${models.data?.models?.find((m) => m.id === selectedModel)?.name}`}
                 variant="outlined"
                 size="small"
                 color="primary"
