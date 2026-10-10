@@ -59,59 +59,68 @@ export default function ChatWorkspace() {
     chat.setError('');
   }, [chat]);
 
-  const selectConversation = useCallback((id: string) => {
-    setActive(id);
-    chat.setLeaf(null);
-  }, [chat]);
+  const selectConversation = useCallback(
+    (id: string) => {
+      setActive(id);
+      chat.setLeaf(null);
+    },
+    [chat],
+  );
 
   // History actions
-  const handleHistoryAction = useCallback(async (row: Conversation, action: string) => {
-    setActionError('');
-    
-    if (action === 'Delete' || action === 'Rename') {
-      setDialog({ conversation: row, action });
-      return;
-    }
+  const handleHistoryAction = useCallback(
+    async (row: Conversation, action: string) => {
+      setActionError('');
 
-    try {
-      if (action.startsWith('Export')) {
-        const format = action.endsWith('JSON') ? 'json' : 'markdown';
-        const response = await request(`/conversations/${row.id}/export?format=${format}`);
-        const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `conversation.${format === 'json' ? 'json' : 'md'}`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } else {
-        await api(`/conversations/${row.id}`, 'PATCH', {
-          archived: action === 'Archive',
-        });
-        await queries.invalidateQueries({ queryKey: ['history'] });
-        if (active === row.id) newChat();
+      if (action === 'Delete' || action === 'Rename') {
+        setDialog({ conversation: row, action });
+        return;
       }
-    } catch (failure) {
-      setActionError((failure as Error).message);
-    }
-  }, [active, newChat, queries]);
+
+      try {
+        if (action.startsWith('Export')) {
+          const format = action.endsWith('JSON') ? 'json' : 'markdown';
+          const response = await request(`/conversations/${row.id}/export?format=${format}`);
+          const url = URL.createObjectURL(await response.blob());
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `conversation.${format === 'json' ? 'json' : 'md'}`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } else {
+          await api(`/conversations/${row.id}`, 'PATCH', {
+            archived: action === 'Archive',
+          });
+          await queries.invalidateQueries({ queryKey: ['history'] });
+          if (active === row.id) newChat();
+        }
+      } catch (failure) {
+        setActionError((failure as Error).message);
+      }
+    },
+    [active, newChat, queries],
+  );
 
   // Dialog actions
-  const handleDialogConfirm = useCallback(async (title?: string) => {
-    if (!dialog) return;
+  const handleDialogConfirm = useCallback(
+    async (title?: string) => {
+      if (!dialog) return;
 
-    try {
-      if (dialog.action === 'Delete') {
-        await api(`/conversations/${dialog.conversation.id}`, 'DELETE');
-        if (active === dialog.conversation.id) newChat();
-      } else if (dialog.action === 'Rename' && title) {
-        await api(`/conversations/${dialog.conversation.id}`, 'PATCH', { title });
+      try {
+        if (dialog.action === 'Delete') {
+          await api(`/conversations/${dialog.conversation.id}`, 'DELETE');
+          if (active === dialog.conversation.id) newChat();
+        } else if (dialog.action === 'Rename' && title) {
+          await api(`/conversations/${dialog.conversation.id}`, 'PATCH', { title });
+        }
+        await queries.invalidateQueries({ queryKey: ['history'] });
+        setDialog(null);
+      } catch (failure) {
+        setActionError((failure as Error).message);
       }
-      await queries.invalidateQueries({ queryKey: ['history'] });
-      setDialog(null);
-    } catch (failure) {
-      setActionError((failure as Error).message);
-    }
-  }, [dialog, active, newChat, queries]);
+    },
+    [dialog, active, newChat, queries],
+  );
 
   // Show admin page if admin is true
   if (admin && user?.role === 'admin') {
@@ -121,7 +130,7 @@ export default function ChatWorkspace() {
   return (
     <Box height="100dvh">
       <SkipLink />
-      
+
       <PanelGroup direction="horizontal">
         {/* Sidebar */}
         <Panel defaultSize={20} minSize={15} maxSize={35}>
@@ -149,8 +158,8 @@ export default function ChatWorkspace() {
         <Panel defaultSize={80}>
           <Stack height="100dvh" bgcolor="background.default">
             <ChatHeader />
-            
-            <ChatMessages 
+
+            <ChatMessages
               chat={chat}
               models={models}
               selectedModel={selectedModel}
@@ -158,7 +167,7 @@ export default function ChatWorkspace() {
               actionError={actionError}
               setActionError={setActionError}
             />
-            
+
             <Container maxWidth="md" id="composer" sx={{ pb: 2, pt: 1 }}>
               <Composer
                 busy={chat.busy}
@@ -177,7 +186,7 @@ export default function ChatWorkspace() {
 
       {/* Dialogs */}
       <SettingsDialog open={settings} onClose={() => setSettings(false)} />
-      
+
       <ConversationDialog
         open={!!dialog}
         conversation={dialog?.conversation || null}

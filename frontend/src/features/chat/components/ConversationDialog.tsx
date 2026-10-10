@@ -18,12 +18,12 @@ interface ConversationDialogProps {
   onConfirm: (title?: string) => void;
 }
 
-export function ConversationDialog({ 
-  open, 
-  conversation, 
-  action, 
-  onClose, 
-  onConfirm 
+export function ConversationDialog({
+  open,
+  conversation,
+  action,
+  onClose,
+  onConfirm,
 }: ConversationDialogProps) {
   const [title, setTitle] = useState('');
 
@@ -46,9 +46,7 @@ export function ConversationDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth>
-      <DialogTitle>
-        {isRename ? 'Rename conversation' : 'Delete conversation?'}
-      </DialogTitle>
+      <DialogTitle>{isRename ? 'Rename conversation' : 'Delete conversation?'}</DialogTitle>
       <DialogContent>
         {isRename ? (
           <TextField

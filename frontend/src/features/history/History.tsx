@@ -36,17 +36,17 @@ interface HistoryProps {
   onAction: (row: Conversation, action: string) => void;
 }
 
-export function History({ 
-  active, 
-  disabled, 
-  onSelect, 
-  onNew, 
-  onSettings, 
-  onAdmin, 
-  onAction 
+export function History({
+  active,
+  disabled,
+  onSelect,
+  onNew,
+  onSettings,
+  onAdmin,
+  onAction,
 }: HistoryProps) {
   const { user } = useAuth();
-  
+
   const [search, setSearch] = useState('');
   const [archived, setArchived] = useState(false);
   const [menu, setMenu] = useState<{
@@ -169,10 +169,7 @@ export function History({
           'Export JSON',
           'Delete',
         ].map((action) => (
-          <MenuItem
-            key={action}
-            onClick={() => menu && handleMenuAction(menu.row, action)}
-          >
+          <MenuItem key={action} onClick={() => menu && handleMenuAction(menu.row, action)}>
             {action}
           </MenuItem>
         ))}

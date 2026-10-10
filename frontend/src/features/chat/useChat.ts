@@ -99,7 +99,11 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
       void queries.refetchQueries({ queryKey: ['usage'], type: 'active' });
     }
   }
-  async function send(content: string, parentId: string | null, model = selectedModel || DEFAULT_MODEL) {
+  async function send(
+    content: string,
+    parentId: string | null,
+    model = selectedModel || DEFAULT_MODEL,
+  ) {
     if (submission.current) return false;
     submission.current = true;
     setBusy(true);
@@ -203,7 +207,10 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
       return false;
     }
   }
-  async function regenerate(message: Message, model = selectedModel || message.model || DEFAULT_MODEL) {
+  async function regenerate(
+    message: Message,
+    model = selectedModel || message.model || DEFAULT_MODEL,
+  ) {
     if (!id || submission.current) return;
     submission.current = true;
     setBusy(true);
