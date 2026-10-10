@@ -156,9 +156,14 @@ export function Composer({
             }
           }}
           sx={{
-            '& fieldset': { border: 0 },
             '& .MuiInputBase-root': { p: 0.5 },
-            '& .MuiInputBase-input:focus-visible': { outline: 'none' },
+            '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline':
+              { border: 0 },
+            '& .MuiInputBase-input:focus-visible, & textarea:focus-visible': {
+              outline: 'none !important',
+              boxShadow: 'none',
+            },
+            '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none' },
           }}
         />
         <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} mt={0.5}>

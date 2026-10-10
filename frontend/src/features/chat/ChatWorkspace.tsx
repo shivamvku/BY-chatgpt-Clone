@@ -4,7 +4,6 @@ import { Box, Container, Stack } from '@mui/material';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // Components
-import { ChatHeader } from './components/ChatHeader';
 import { ChatMessages } from './components/ChatMessages';
 import { ConversationDialog } from './components/ConversationDialog';
 import { History } from '../history/History';
@@ -163,8 +162,6 @@ export default function ChatWorkspace() {
         {/* Main Chat */}
         <Panel defaultSize={80}>
           <Stack height="100dvh" bgcolor="background.default">
-            <ChatHeader />
-
             <ChatMessages
               chat={chat}
               models={models}

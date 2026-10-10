@@ -360,6 +360,20 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
     queryFn: () => api<Subscription>('/subscription'),
     enabled: open,
   });
+  const usage = useQuery({
+    queryKey: ['usage'],
+    queryFn: () => api<Usage>('/usage'),
+    enabled: open,
+  });
+  const requestShare = usage.data
+    ? Math.min(100, Math.round((usage.data.requests / Math.max(1, usage.data.request_limit)) * 100))
+    : 0;
+  const tokenShare = usage.data
+    ? Math.min(
+        100,
+        Math.round((usage.data.reserved_tokens / Math.max(1, usage.data.token_limit)) * 100),
+      )
+    : 0;
   const nav: NavItem[] = [
     {
       id: 'general',
@@ -487,6 +501,69 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               </ListItemButton>
             ))}
           </List>
+          <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Daily usage
+            </Typography>
+            {usage.isPending && <LinearProgress aria-label="Loading daily usage" />}
+            {usage.isError && (
+              <Typography variant="caption" color="text.secondary">
+                Usage is currently unavailable.
+              </Typography>
+            )}
+            {usage.data && (
+              <Stack spacing={1.25}>
+                <Box>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    spacing={1}
+                    sx={{ mb: 0.5 }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Chat requests
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {usage.data.requests}/{usage.data.request_limit}
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    aria-label="Daily chat request usage"
+                    variant="determinate"
+                    value={requestShare}
+                  />
+                </Box>
+                <Box>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    spacing={1}
+                    sx={{ mb: 0.5 }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Reserved tokens
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {usage.data.reserved_tokens.toLocaleString()}/
+                      {usage.data.token_limit.toLocaleString()}
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    aria-label="Daily reserved token usage"
+                    variant="determinate"
+                    value={tokenShare}
+                  />
+                </Box>
+                <Button
+                  size="small"
+                  onClick={() => setSection('plan')}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  View plan &amp; usage
+                </Button>
+              </Stack>
+            )}
+          </Box>
           <Button
             color="inherit"
             startIcon={<LogoutOutlined />}

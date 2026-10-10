@@ -46,6 +46,7 @@ export function History({
   onAction,
 }: HistoryProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [search, setSearch] = useState('');
   const [archived, setArchived] = useState(false);
@@ -151,7 +152,7 @@ export function History({
       >
         {user?.name}
       </Button>
-      {user?.role === 'admin' && (
+      {isAdmin && (
         <Button
           startIcon={<AdminPanelSettings />}
           onClick={onAdmin}
