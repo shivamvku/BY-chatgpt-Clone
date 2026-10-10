@@ -1,3 +1,4 @@
+import re
 import secrets
 
 from fastapi import HTTPException, Request, Response
@@ -43,8 +44,12 @@ def session_state(*, request: Request, response: Response, db: Session):
     )
     csrf = request.cookies.get("yc_csrf", "")
     if not user or not user.active:
-        csrf = secrets.token_urlsafe(32)
-        csrf_cookie(response, csrf)
+        # Keep the anonymous CSRF token stable across session bootstrap requests.
+        # Rotating it on every GET makes parallel tabs/StrictMode bootstrap requests
+        # race: one tab can hold token A while the shared cookie has already become B.
+        if not csrf or not re.fullmatch(r"[A-Za-z0-9_-]{43}", csrf):
+            csrf = secrets.token_urlsafe(32)
+            csrf_cookie(response, csrf)
         return {"user": None, "csrf": csrf}
     if not csrf or digest(csrf) != session.csrf_hash:
         csrf = secrets.token_urlsafe(32)
