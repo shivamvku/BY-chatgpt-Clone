@@ -2,12 +2,8 @@
  * WebSocket client for real-time session management
  */
 
-type WebSocketEventType = 
-  | 'session_status'
-  | 'session_expired' 
-  | 'session_valid'
-  | 'logout'
-  | 'pong';
+type WebSocketEventType =
+  'session_status' | 'session_expired' | 'session_valid' | 'logout' | 'pong';
 
 interface WebSocketMessage {
   type: WebSocketEventType;
@@ -36,7 +32,7 @@ class SessionWebSocket {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
       this.ws = new WebSocket(`${protocol}//${host}/api/ws/session`);
-      
+
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.isConnected = true;
@@ -58,19 +54,18 @@ class SessionWebSocket {
         console.log('WebSocket disconnected:', event.code, event.reason);
         this.isConnected = false;
         this.stopPing();
-        
+
         // Don't reconnect if explicitly closed or unauthorized
         if (event.code === 4001 || event.code === 1000) {
           return;
         }
-        
+
         this.scheduleReconnect();
       };
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
       };
-
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       this.scheduleReconnect();
@@ -80,7 +75,7 @@ class SessionWebSocket {
   private handleMessage(message: WebSocketMessage) {
     const handlers = this.eventHandlers.get(message.type);
     if (handlers) {
-      handlers.forEach(handler => {
+      handlers.forEach((handler) => {
         try {
           handler(message.data);
         } catch (error) {
@@ -93,13 +88,13 @@ class SessionWebSocket {
   private emit(type: WebSocketEventType, data: unknown) {
     const handlers = this.eventHandlers.get(type);
     if (handlers) {
-      handlers.forEach(handler => handler(data));
+      handlers.forEach((handler) => handler(data));
     }
   }
 
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
-    
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('Max reconnection attempts reached');
       this.emit('session_status', { status: 'failed', error: 'Max reconnection attempts reached' });
@@ -108,9 +103,9 @@ class SessionWebSocket {
 
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
     this.reconnectAttempts++;
-    
+
     console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
+
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
@@ -174,7 +169,7 @@ class SessionWebSocket {
 
   public getConnectionStatus(): 'connected' | 'connecting' | 'disconnected' {
     if (!this.ws) return 'disconnected';
-    
+
     switch (this.ws.readyState) {
       case WebSocket.CONNECTING:
         return 'connecting';

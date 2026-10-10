@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [error, setError] = useState('');
   const queries = useQueryClient();
   const { setPreferences } = useAppearance();
-  
+
   const accept = useCallback(
     (state: AuthState) => {
       setCsrf(state.csrf);
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [queries, setPreferences],
   );
-  
+
   // Initial session check - only called once on app start
   const initialRefresh = useCallback(async () => {
     setError('');
@@ -54,34 +54,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void initialRefresh();
-    
+
     // Set up WebSocket for real-time session management
     const ws = getSessionWebSocket();
-    
+
     const handleSessionExpired = () => {
       console.log('Session expired via WebSocket');
       setUser(null);
       queries.clear();
     };
-    
+
     const handleSessionValid = (data: unknown) => {
       console.log('Session validated via WebSocket');
       // Update user data from WebSocket
       const sessionData = data as { user: User };
       setUser(sessionData.user);
     };
-    
+
     const handleLogout = () => {
       console.log('Logout notification via WebSocket');
       setUser(null);
       queries.clear();
     };
-    
+
     // Register WebSocket event handlers
     ws.on('session_expired', handleSessionExpired);
     ws.on('session_valid', handleSessionValid);
     ws.on('logout', handleLogout);
-    
+
     // Clean up WebSocket handlers on unmount
     return () => {
       ws.off('session_expired', handleSessionExpired);
@@ -92,19 +92,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function authenticate(path: string, data: unknown) {
     accept(await api<AuthState>(`/auth/${path}`, 'POST', data));
     queries.clear();
-    
+
     // After successful login, the WebSocket will automatically connect
     // and start managing the session
   }
-  
+
   async function logout(all = false) {
     await api(all ? '/auth/sessions' : '/auth/logout', all ? 'DELETE' : 'POST');
     setUser(null);
     queries.clear();
-    
+
     // Disconnect WebSocket on logout
     disconnectSessionWebSocket();
-    
+
     // No need to refresh - user is logged out
   }
   return (
