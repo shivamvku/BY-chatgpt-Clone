@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -8,12 +9,8 @@ export default defineConfig({
     baseURL: process.env.APP_URL || 'http://localhost:5173',
     trace: 'retain-on-failure',
   },
-  projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    {
-      name: 'mobile',
-      use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' },
-    },
-  ],
+  // This project is a desktop web application. Keep browser coverage focused
+  // on desktop Chromium instead of running a separate iPhone/mobile viewport.
+  projects: [{ name: 'desktop', use: { ...devices['Desktop Chrome'] } }],
   reporter: 'list',
 });
