@@ -193,7 +193,7 @@ export function AdminUsersTable({
                     <Stack direction="row" justifyContent="flex-end" spacing={0.5} flexWrap="wrap">
                       <Button
                         size="small"
-                        disabled={busy || row.id === user?.id}
+                        disabled={busy || row.id === currentUserId}
                         onClick={() => onChange(row, 'role')}
                       >
                         {row.role === 'admin' ? 'Remove admin' : 'Make admin'}
@@ -201,7 +201,7 @@ export function AdminUsersTable({
                       <Button
                         size="small"
                         color={row.active ? 'error' : 'primary'}
-                        disabled={busy || row.id === user?.id}
+                        disabled={busy || row.id === currentUserId}
                         onClick={() => onChange(row, 'access')}
                       >
                         {row.active ? 'Disable' : 'Enable'}
