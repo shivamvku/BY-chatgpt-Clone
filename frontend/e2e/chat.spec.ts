@@ -29,7 +29,7 @@ test('stream, persist, branch, export, archive and delete a conversation', async
   await page.getByLabel('Prompt', { exact: true }).fill('A different question');
   await page.getByRole('button', { name: 'Send edited prompt' }).click();
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
-  await expect(page.getByText('A different question', { exact: true })).toBeVisible();
+  await expect(page.getByText('A different question', { exact: true }).last()).toBeVisible();
 
   // Follow-up prompts must continue from the previous answer, not create a new root.
   const earlierPrompt = page
