@@ -48,7 +48,8 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
     def handler(request):
         assert request.url.host == "api.groq.com"
         assert request.headers["authorization"] == "Bearer test-only-key"
-        payload = request.read()\n        assert b"openai/gpt-oss-120b" in payload
+        payload = request.read()
+        assert b"openai/gpt-oss-120b" in payload
         return httpx.Response(
             200, content=b'data: {"choices":[{"delta":{"content":"hello"}}]}\n\ndata: [DONE]\n\n'
         )
