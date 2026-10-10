@@ -23,7 +23,7 @@ describe('CSRF recovery', () => {
         headers: { 'Content-Type': 'application/json' },
       }),
     ];
-    const fetchMock = vi.fn(() => Promise.resolve(responses.shift()!));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(responses.shift()!));
     vi.stubGlobal('fetch', fetchMock);
 
     const login = request('/auth/login', {
