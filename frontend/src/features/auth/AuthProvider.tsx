@@ -89,6 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ws.off('logout', handleLogout);
     };
   }, [queries, initialRefresh]);
+  const refresh = useCallback(async () => {
+    setError('');
+    try {
+      // Read the authoritative session state over HTTP. The WebSocket may still
+      // be disconnected (for example, after an anonymous page boot), so sending
+      // a session_check message alone is not a reliable refresh.
+      accept(await api<AuthState>('/auth/session'));
+    } catch (failure) {
+      if ((failure as ApiError).status === 401) {
+        setUser(null);
+      } else {
+        setError((failure as Error).message);
+      }
+    }
+  }, [accept]);
+
   async function authenticate(path: string, data: unknown) {
     accept(await api<AuthState>(`/auth/${path}`, 'POST', data));
     queries.clear();
@@ -116,12 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authenticate,
         logout,
         updateUser: setUser,
-        refresh: () => {
-          // Manual refresh via WebSocket session check
-          const ws = getSessionWebSocket();
-          ws.checkSession();
-          return Promise.resolve();
-        },
+        refresh,
       }}
     >
       {children}
