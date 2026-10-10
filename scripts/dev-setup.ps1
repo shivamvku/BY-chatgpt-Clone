@@ -11,17 +11,23 @@ Write-Host "🚀 Setting up YounderChat local development environment..." -Foreg
 # Check Python version
 Write-Host "📋 Checking Python version..." -ForegroundColor Yellow
 try {
-    $PythonVersion = python --version
-    Write-Host "✅ Found: $PythonVersion" -ForegroundColor Green
-    
-    # Check if Python 3.12+
-    $VersionNumber = ($PythonVersion -split ' ')[1]
-    $Major, $Minor = $VersionNumber -split '\.'
-    if ([int]$Major -lt 3 -or ([int]$Major -eq 3 -and [int]$Minor -lt 12)) {
-        throw "Python 3.12+ required, found $VersionNumber"
+    $PythonOutput = python --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $PythonVersion = $PythonOutput.ToString()
+        Write-Host "✅ Found: $PythonVersion" -ForegroundColor Green
+        
+        # Check if Python 3.12+
+        $VersionNumber = ($PythonVersion -split ' ')[1]
+        $Major, $Minor = $VersionNumber -split '\.'
+        if ([int]$Major -lt 3 -or ([int]$Major -eq 3 -and [int]$Minor -lt 12)) {
+            throw "Python 3.12+ required, found $VersionNumber"
+        }
+    } else {
+        throw "Python not found or returned error"
     }
 } catch {
     Write-Host "❌ Python 3.12+ is required. Please install Python and add it to PATH." -ForegroundColor Red
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -115,10 +121,16 @@ Set-Location ..
 # Check Node version
 Write-Host "📋 Checking Node.js version..." -ForegroundColor Yellow
 try {
-    $NodeVersion = node --version
-    Write-Host "✅ Found Node.js: $NodeVersion" -ForegroundColor Green
+    $NodeOutput = node --version 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $NodeVersion = $NodeOutput.ToString()
+        Write-Host "✅ Found Node.js: $NodeVersion" -ForegroundColor Green
+    } else {
+        throw "Node.js not found or returned error"
+    }
 } catch {
     Write-Host "❌ Node.js is required. Please install Node.js 18+ and add it to PATH." -ForegroundColor Red
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
