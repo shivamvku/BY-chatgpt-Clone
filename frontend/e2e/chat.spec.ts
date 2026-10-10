@@ -65,6 +65,12 @@ test('stream, persist, branch, export, archive and delete a conversation', async
   await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
   await page.getByLabel('Conversation title').fill('Saved conversation');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
+  const historySearch = page.getByRole('textbox', { name: 'Search conversations' });
+  await historySearch.fill('no-such-conversation');
+  await expect(page.getByText('No conversations yet.')).toBeVisible();
+  await historySearch.fill('');
+  await expect(page.getByRole('button', { name: 'Actions for Saved conversation' })).toBeVisible();
+
   await page.getByRole('button', { name: 'Actions for Saved conversation' }).click();
   await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'Archive', exact: true })).toBeHidden();
