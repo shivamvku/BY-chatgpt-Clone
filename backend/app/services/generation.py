@@ -17,6 +17,24 @@ from app.services.conversations import context_messages, owned
 logger = logging.getLogger(__name__)
 
 
+def _failure_message(exc: Exception) -> str:
+    """Return actionable, credential-safe provider errors to the chat client."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status in {401, 403}:
+        return "The AI provider rejected its API key or model access. Check the provider credentials and model permissions."
+    if status == 404:
+        return "The selected AI model is no longer available. Choose another model or update the provider model configuration."
+    if status == 429:
+        return "The AI provider rate limit or quota was reached. Retry shortly."
+    if status is not None and status >= 500:
+        return "The AI provider is temporarily unavailable. Retry shortly."
+    if isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
+        return "The AI provider timed out. Retry shortly."
+    if status is not None and status >= 400:
+        return "The AI provider rejected the request. Check the model ID and provider configuration."
+    return "AI response failed. Retry when the provider is available."
+
+
 def claim(user_id: str, message_id: str) -> tuple[list[dict[str, str]], str]:
     with Session(get_engine()) as db:
         row = db.get(Message, message_id)
