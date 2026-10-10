@@ -3,6 +3,7 @@ from functools import lru_cache
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
@@ -18,7 +19,7 @@ def get_engine() -> Engine:
         raise RuntimeError("DATABASE_URL is not configured")
     
     if url.startswith("sqlite"):
-        return create_engine(url, connect_args={"check_same_thread": False})
+        return create_engine(url, connect_args={"check_same_thread": False}, poolclass=NullPool)
     else:
         return create_engine(
             url, 
