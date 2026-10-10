@@ -35,7 +35,7 @@ def model_metadata(*, plan_id: str):
     return {
         "configured": any(model["available"] for model in choices),
         "models": choices,
-        "capabilities": {"images": "display-only", "tools": False},
+        "capabilities": {"images": "vision", "tools": False},
     }
 
 

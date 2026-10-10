@@ -43,13 +43,13 @@ interface ChatMessagesProps {
   setActionError: (error: string) => void;
 }
 
-export function ChatMessages({ 
-  chat, 
-  models, 
-  selectedModel, 
-  active, 
-  actionError, 
-  setActionError 
+export function ChatMessages({
+  chat,
+  models,
+  selectedModel,
+  active,
+  actionError,
+  setActionError,
 }: ChatMessagesProps) {
   const scroll = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
@@ -65,8 +65,7 @@ export function ChatMessages({
   const handleScroll = () => {
     const element = scroll.current;
     if (element) {
-      nearBottom.current =
-        element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+      nearBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
     }
   };
 
@@ -94,8 +93,8 @@ export function ChatMessages({
         {/* Configuration Messages */}
         {models.data && !models.data.configured && (
           <Alert severity="info" sx={{ mb: 3 }}>
-            Chat is currently unavailable. Your account, settings, and saved conversations are
-            still accessible. Please contact your administrator.
+            Chat is currently unavailable. Your account, settings, and saved conversations are still
+            accessible. Please contact your administrator.
           </Alert>
         )}
 
