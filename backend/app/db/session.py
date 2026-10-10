@@ -17,7 +17,7 @@ def get_engine() -> Engine:
     url = get_settings().database_url
     if not url:
         raise RuntimeError("DATABASE_URL is not configured")
-    
+
     if url.startswith("sqlite"):
         return create_engine(
             url,
