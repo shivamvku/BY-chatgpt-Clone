@@ -30,6 +30,26 @@ test('stream, persist, branch, export, archive and delete a conversation', async
   await page.getByRole('button', { name: 'Send edited prompt' }).click();
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
   await expect(page.getByText('A different question', { exact: true })).toBeVisible();
+
+  // Follow-up prompts must continue from the previous answer, not create a new root.
+  const earlierPrompt = page
+    .locator('article[data-msg="true"]')
+    .filter({ hasText: 'Compare my options' });
+  await expect(earlierPrompt).toBeVisible();
+  await page
+    .getByRole('textbox', { name: 'Message', exact: true })
+    .fill('What are the next steps?');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect(page.getByText('What are the next steps?', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
+  await expect(earlierPrompt).toBeVisible();
+
+  // Verify that the earlier turn remains reachable by scrolling the message pane.
+  await page.getByTestId('chat-messages-scroll').evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect(earlierPrompt).toBeInViewport();
+
   await page.screenshot({
     path: `../.codex-tmp/younderchat-chat-${test.info().project.name}.png`,
     fullPage: true,

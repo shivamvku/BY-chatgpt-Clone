@@ -57,10 +57,14 @@ export function ChatMessages({
   const visible = visibleBranch(chat.messages.data || [], chat.leaf);
 
   useEffect(() => {
+    nearBottom.current = true;
+  }, [active]);
+
+  useEffect(() => {
     if (nearBottom.current) {
       scroll.current?.scrollTo({ top: scroll.current.scrollHeight });
     }
-  }, [chat.messages.data]);
+  }, [chat.messages.data, active, chat.leaf]);
 
   const handleScroll = () => {
     const element = scroll.current;
@@ -76,7 +80,15 @@ export function ChatMessages({
   ];
 
   return (
-    <Box ref={scroll} onScroll={handleScroll} flex={1} overflow="auto">
+    <Box
+      ref={scroll}
+      data-testid="chat-messages-scroll"
+      onScroll={handleScroll}
+      flex={1}
+      minHeight={0}
+      minWidth={0}
+      overflow="auto"
+    >
       <Container maxWidth="md" sx={{ py: 3 }}>
         {/* Error Messages */}
         {actionError && (
