@@ -36,7 +36,9 @@ test('stream, persist, branch, export, archive and delete a conversation', async
     .locator('article[data-msg="true"]')
     .filter({ hasText: 'Compare my options' });
   await expect(earlierPrompt).toBeVisible();
-  await page.getByRole('textbox', { name: 'Message', exact: true }).fill('What are the next steps?');
+  await page
+    .getByRole('textbox', { name: 'Message', exact: true })
+    .fill('What are the next steps?');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.getByText('What are the next steps?', { exact: true })).toBeVisible();
   await expect(earlierPrompt).toBeVisible();
