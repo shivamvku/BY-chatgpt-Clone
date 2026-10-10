@@ -25,7 +25,13 @@ import LockOutlined from '@mui/icons-material/LockOutlined';
 import { api } from '../../shared/api';
 import type { Subscription, Usage } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
-import { GeneralSection, AppearanceSection, PlanSection, DataSection, SecuritySection } from './SettingsSections';
+import {
+  AppearanceSection,
+  DataSection,
+  GeneralSection,
+  PlanSection,
+  SecuritySection,
+} from './SettingsSections';
 
 type SectionId = 'general' | 'appearance' | 'plan' | 'data' | 'security' | 'admin';
 
