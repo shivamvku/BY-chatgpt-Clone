@@ -34,12 +34,7 @@ describe('conversation branches', () => {
       row('a2', 'u2', 'assistant'),
     ];
     expect(visibleBranch(rows).map((value) => value.id)).toEqual(['u1', 'a1', 'u2', 'a2']);
-    expect(visibleBranch(rows, 'a2').map((value) => value.id)).toEqual([
-      'u1',
-      'a1',
-      'u2',
-      'a2',
-    ]);
+    expect(visibleBranch(rows, 'a2').map((value) => value.id)).toEqual(['u1', 'a1', 'u2', 'a2']);
     expect(visibleBranch(rows, 'a1').map((value) => value.id)).toEqual(['u1', 'a1']);
   });
 
