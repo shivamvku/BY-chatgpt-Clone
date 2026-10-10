@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.entities import Audit, Plan
 from app.schemas.accounts import (
     AuditView,
     EmailRequest,
+    MemberView,
     Notice,
     PlanUpdate,
     PlanView,
@@ -21,13 +19,6 @@ from app.services import subscriptions as service
 from app.services.security import Identity, admin, identity, verified_identity
 
 router = APIRouter(tags=["subscriptions"])
-
-
-class MemberView(BaseModel):
-    id: str
-    name: str
-    email: str
-    owner: bool
 
 
 @router.get("/subscription/members", response_model=list[MemberView])
@@ -76,7 +67,7 @@ def usage_events(
 
 @router.get("/admin/plans", response_model=list[PlanView])
 def plans(current: Identity = Depends(admin), db: Session = Depends(get_db)):
-    return db.scalars(select(Plan).order_by(Plan.seats)).all()
+    return service.list_plans(db)
 
 
 @router.patch("/admin/plans/{plan_id}", response_model=PlanView)
@@ -105,6 +96,4 @@ def audit(
     current: Identity = Depends(admin),
     db: Session = Depends(get_db),
 ):
-    return db.scalars(
-        select(Audit).where(Audit.id > after).order_by(Audit.created_at.desc(), Audit.id).limit(100)
-    ).all()
+    return service.list_audit(db, after)

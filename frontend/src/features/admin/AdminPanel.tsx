@@ -28,16 +28,10 @@ import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined';
 import GroupOutlined from '@mui/icons-material/GroupOutlined';
 import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
 import { api } from '../../shared/api';
-import type { AdminUser, User } from '../../shared/types';
+import type { AdminSummary, AdminUser, User } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 import { PlanPanel } from './PlanPanel';
 
-interface AdminSummary {
-  total_users: number;
-  active_users: number;
-  verified_users: number;
-  administrators: number;
-}
 type Change = { row: AdminUser; kind: 'role' | 'access' } | null;
 
 function SummaryCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {

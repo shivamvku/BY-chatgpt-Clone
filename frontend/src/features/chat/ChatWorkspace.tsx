@@ -29,7 +29,7 @@ import { MessageCard } from './MessageCard';
 import { useChat } from './useChat';
 import { visibleBranch } from './branches';
 import { api, request } from '../../shared/api';
-import type { Conversation, ModelInfo } from '../../shared/types';
+import { DEFAULT_MODEL, type Conversation, type ModelInfo } from '../../shared/types';
 
 export default function ChatWorkspace() {
   const [active, setActive] = useState<string | null>(null),
@@ -50,7 +50,7 @@ export default function ChatWorkspace() {
   const chat = useChat(active, select),
     models = useQuery({ queryKey: ['models'], queryFn: () => api<ModelInfo>('/models') });
 
-  const [model, setModel] = useState('gemini-3.5-flash');
+  const [model, setModel] = useState(DEFAULT_MODEL);
 
   const visible = visibleBranch(chat.messages.data || [], chat.leaf),
     scroll = useRef<HTMLDivElement>(null),
@@ -73,7 +73,7 @@ export default function ChatWorkspace() {
     } else {
       scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [chat.messages.data]);
+  }, [chat.messages.data, useVirtual, virtualizer, visible.length]);
 
   useEffect(() => {
     if (models.data?.models.some((item) => item.id === model && item.available)) return;

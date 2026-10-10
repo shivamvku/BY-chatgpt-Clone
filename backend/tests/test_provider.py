@@ -13,6 +13,7 @@ def test_gemini_protocol(monkeypatch):
 
     def handler(request):
         assert request.url.path.endswith(":streamGenerateContent")
+        assert "/gemini-2.5-flash:" in request.url.path
         # Key is sent via header, not query param (see x-goog-api-key usage in provider)
         assert request.headers["x-goog-api-key"] == "test-only-key"
         payload = (
@@ -66,12 +67,10 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
         ]
 
     assert asyncio.run(collect()) == ["hello"]
-    # With only GROQ_API_KEY set, Gemini models are unavailable but still listed.
-    # 'auto' must not appear in any plan's choices.
+    # Basic includes only Gemini; Groq is available to Pro and Pro Max.
     ids = [row["id"] for row in provider.choices("basic")]
-    assert "auto" not in ids
-    assert ids[0] == "gemini-3.5-flash"   # first by priority
-    assert "groq-qwen3-27b" in ids
+    assert ids == ["gemini-flash"]
+    assert [row["id"] for row in provider.choices("pro")] == ["gemini-flash", "groq-fast"]
     get_settings.cache_clear()
 
 
@@ -80,3 +79,35 @@ def test_choices_no_auto():
     for plan in ("basic", "pro", "pro_max"):
         ids = [row["id"] for row in provider.choices(plan)]
         assert "auto" not in ids
+
+
+def test_gemini_empty_stream_fails(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-only-key")
+    get_settings.cache_clear()
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        provider.httpx,
+        "AsyncClient",
+        lambda **kwargs: original(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, content=b"data: {}\n\n")
+            ),
+            **kwargs,
+        ),
+    )
+
+    async def collect():
+        return [
+            text
+            async for text in provider.stream_completion(
+                [{"role": "user", "content": "hello"}], "gemini-flash"
+            )
+        ]
+
+    try:
+        asyncio.run(collect())
+    except ValueError as error:
+        assert str(error) == "Provider stream ended before completion"
+    else:
+        raise AssertionError("Empty Gemini streams must fail")
+    get_settings.cache_clear()

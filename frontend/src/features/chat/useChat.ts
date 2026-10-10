@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, streamResponse } from '../../shared/api';
-import type { Conversation, Message } from '../../shared/types';
+import { DEFAULT_MODEL, type Conversation, type Message } from '../../shared/types';
 
 export function useChat(id: string | null, select: (id: string) => void) {
   const queries = useQueryClient(),
@@ -99,7 +99,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       void queries.refetchQueries({ queryKey: ['usage'], type: 'active' });
     }
   }
-  async function send(content: string, parentId: string | null, model = 'gemini-3.5-flash') {
+  async function send(content: string, parentId: string | null, model = DEFAULT_MODEL) {
     if (submission.current) return false;
     submission.current = true;
     setBusy(true);
@@ -203,7 +203,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       return false;
     }
   }
-  async function regenerate(message: Message, model = message.model || 'gemini-3.5-flash') {
+  async function regenerate(message: Message, model = message.model || DEFAULT_MODEL) {
     if (!id || submission.current) return;
     submission.current = true;
     setBusy(true);

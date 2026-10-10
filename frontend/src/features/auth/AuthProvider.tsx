@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, setCsrf } from '../../shared/api';
 import type { AuthState, User } from '../../shared/types';
@@ -20,17 +20,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [error, setError] = useState('');
   const queries = useQueryClient();
   const { setPreferences } = useAppearance();
-  function accept(state: AuthState) {
-    setCsrf(state.csrf);
-    setUser(state.user);
-    if (!state.user) queries.clear();
-    if (state.user)
-      setPreferences({
-        appearance: state.user.appearance,
-        contrast: state.user.contrast,
-      });
-  }
-  async function refresh() {
+  const accept = useCallback(
+    (state: AuthState) => {
+      setCsrf(state.csrf);
+      setUser(state.user);
+      if (!state.user) queries.clear();
+      if (state.user)
+        setPreferences({
+          appearance: state.user.appearance,
+          contrast: state.user.contrast,
+        });
+    },
+    [queries, setPreferences],
+  );
+  const refresh = useCallback(async () => {
     setError('');
     try {
       accept(await api<AuthState>('/auth/session'));
@@ -39,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [accept]);
   useEffect(() => {
     void refresh();
     const expired = () => {
@@ -49,8 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('session-expired', expired);
     return () => window.removeEventListener('session-expired', expired);
-    // Session initialization runs once; appearance changes must not reset authentication.
-  }, []);
+  }, [queries, refresh]);
   async function authenticate(path: string, data: unknown) {
     accept(await api<AuthState>(`/auth/${path}`, 'POST', data));
     queries.clear();

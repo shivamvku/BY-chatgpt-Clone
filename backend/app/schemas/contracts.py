@@ -4,6 +4,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.services.provider import DEFAULT_MODEL
+
 
 # Import lazily to avoid circular imports at module load time.
 def _valid_model_ids() -> set[str]:
@@ -118,7 +120,7 @@ class SendMessage(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
     # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
     # so old clients/stored data continue to resolve correctly.
-    model: str = Field(default="gemini-3.5-flash", max_length=80)
+    model: str = Field(default=DEFAULT_MODEL, max_length=80)
 
     @field_validator("model")
     @classmethod
@@ -132,7 +134,7 @@ class Regenerate(BaseModel):
     request_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
     # Default is the first real model; 'auto' is still accepted via _LEGACY_ALIAS
     # so old clients/stored data continue to resolve correctly.
-    model: str = Field(default="gemini-3.5-flash", max_length=80)
+    model: str = Field(default=DEFAULT_MODEL, max_length=80)
 
     @field_validator("model")
     @classmethod
@@ -175,6 +177,7 @@ class ConversationPage(BaseModel):
 class ModelChoice(BaseModel):
     id: str
     name: str
+    provider: Literal["gemini", "groq"]
     available: bool
 
 

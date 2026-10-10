@@ -57,7 +57,7 @@ def conversation(client):
     return response.json()["id"]
 
 
-def send(client, identifier, request_id=None, model="gemini-3.5-flash"):
+def send(client, identifier, request_id=None, model="gemini-flash"):
     return client.post(
         f"/api/conversations/{identifier}/messages",
         json={
@@ -188,17 +188,11 @@ def test_model_catalog_and_basic_plan_enforcement(app):
     catalog = client.get("/api/models").json()
     assert catalog["configured"] is True
     model_ids = [m["id"] for m in catalog["models"]]
-    # Gemini models available (key set in fixture), Groq unavailable (no key in fixture)
-    assert "gemini-3.5-flash" in model_ids
-    assert "groq-qwen3-27b" in model_ids
-    gemini_models = [m for m in catalog["models"] if "gemini" in m["id"]]
-    groq_models = [m for m in catalog["models"] if "groq" in m["id"]]
-    assert all(m["available"] for m in gemini_models)
-    assert all(not m["available"] for m in groq_models)
-    # Legacy model IDs must not appear in the catalogue
-    assert "gemini-flash" not in model_ids
-    assert "groq-fast" not in model_ids
-    assert "auto" not in model_ids
+    assert model_ids == ["gemini-flash"]
+    assert catalog["models"][0]["provider"] == "gemini"
+    assert catalog["models"][0]["available"] is True
+    identifier = conversation(client)
+    assert send(client, identifier, model="groq-fast").status_code == 403
 
 
 def test_private_image_validation_and_isolation(app):

@@ -7,62 +7,41 @@ from app.core.config import get_settings
 
 # ---------------------------------------------------------------------------
 # Model catalogue
-# Each entry: internal id → display name, provider tag, plans that can use it
+# Each entry keeps the stable API model identifier separate from the UI identifier.
+# Stored message model IDs remain stable when a provider retires a model.
 # ---------------------------------------------------------------------------
+DEFAULT_MODEL = "gemini-flash"
+
 MODELS: dict[str, dict] = {
-    # ── Gemini (Google AI Studio) ──────────────────────────────────────────
-    "gemini-3.5-flash": {
-        "name": "Gemini 3.5 Flash",
+    "gemini-flash": {
+        "name": "Gemini 2.5 Flash",
         "provider": "gemini",
         "plans": {"basic", "pro", "pro_max"},
         "priority": 10,
+        "api_model": "gemini-2.5-flash",
     },
-    "gemini-3.6-flash": {
-        "name": "Gemini 3.6 Flash",
-        "provider": "gemini",
-        "plans": {"basic", "pro", "pro_max"},
-        "priority": 11,
-    },
-    "gemini-3.7-flash": {
-        "name": "Gemini 3.7 Flash",
-        "provider": "gemini",
-        "plans": {"basic", "pro", "pro_max"},
-        "priority": 12,
-    },
-    # ── Groq ───────────────────────────────────────────────────────────────
-    "groq-qwen3-27b": {
-        "name": "Groq · Qwen 3.8 27B",
+    "groq-fast": {
+        "name": "Groq · GPT-OSS 20B",
         "provider": "groq",
-        "plans": {"basic", "pro", "pro_max"},
+        "plans": {"pro", "pro_max"},
         "priority": 20,
-        "groq_model": "qwen/qwen3.8-27b",
-    },
-    "groq-gpt-oss-120b": {
-        "name": "Groq · GPT OSS 120B",
-        "provider": "groq",
-        "plans": {"basic", "pro", "pro_max"},
-        "priority": 21,
-        "groq_model": "openai/gpt-oss-120b",
-    },
-    "groq-gpt-oss-20b": {
-        "name": "Groq · GPT OSS 20B",
-        "provider": "groq",
-        "plans": {"basic", "pro", "pro_max"},
-        "priority": 22,
-        "groq_model": "openai/gpt-oss-20b",
+        "api_model": "openai/gpt-oss-20b",
     },
 }
 
 # Keep legacy IDs working so existing messages stored with old model strings
 # still resolve to a valid provider call.
 _LEGACY_ALIAS: dict[str, str] = {
-    "gemini-flash": "gemini-3.5-flash",
-    "groq-fast": "groq-qwen3-27b",
-    # Old catalogue entries → closest real model
-    "gemini-3.8-flash": "gemini-3.7-flash",
-    "gemini-3.1-flash-lite": "gemini-3.5-flash",
+    "gemini-3.5-flash": "gemini-flash",
+    "gemini-3.6-flash": "gemini-flash",
+    "gemini-3.7-flash": "gemini-flash",
+    "gemini-3.8-flash": "gemini-flash",
+    "gemini-3.1-flash-lite": "gemini-flash",
+    "groq-qwen3-27b": "groq-fast",
+    "groq-gpt-oss-120b": "groq-fast",
+    "groq-gpt-oss-20b": "groq-fast",
     # Any stored 'auto' model messages fall back to the default Gemini model
-    "auto": "gemini-3.5-flash",
+    "auto": DEFAULT_MODEL,
 }
 
 
@@ -90,7 +69,14 @@ def choices(plan_id: str) -> list[dict[str, object]]:
         if plan_id not in definition["plans"]:
             continue
         available = _provider_available(model_id)
-        result.append({"id": model_id, "name": definition["name"], "available": available})
+        result.append(
+            {
+                "id": model_id,
+                "name": definition["name"],
+                "provider": definition["provider"],
+                "available": available,
+            }
+        )
     return result
 
 
@@ -178,7 +164,10 @@ async def _gemini(messages: list[dict[str, str]], gemini_model: str) -> AsyncIte
             },
         ) as response:
             response.raise_for_status()
+            content_yielded = False
             async for line in response.aiter_lines():
+                if len(line) > 262144:
+                    raise ValueError("Provider event exceeded limit")
                 if not line.startswith("data:"):
                     continue
                 event = json.loads(line[5:].strip())
@@ -186,7 +175,10 @@ async def _gemini(messages: list[dict[str, str]], gemini_model: str) -> AsyncIte
                     (event.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
                 ):
                     if text := part.get("text"):
+                        content_yielded = True
                         yield text
+            if not content_yielded:
+                raise ValueError("Provider stream ended before completion")
 
 
 async def stream_completion(
@@ -202,14 +194,12 @@ async def stream_completion(
     provider = entry["provider"]
 
     if provider == "gemini" and get_settings().gemini_api_key:
-        # Use the model id directly as the Gemini API model name
-        async for text in _gemini(messages, canonical):
+        async for text in _gemini(messages, entry["api_model"]):
             yield text
         return
 
     if provider == "groq" and get_settings().groq_api_key:
-        groq_model = entry.get("groq_model", canonical)
-        async for text in _groq(messages, groq_model):
+        async for text in _groq(messages, entry["api_model"]):
             yield text
         return
 

@@ -31,7 +31,7 @@ def verify_password(encoded: str, password: str) -> bool:
 
 def rate_limit(db: Session, key: str, limit: int, seconds: int = 900):
     bucket_key = digest(f"{key}:{now() // seconds}")
-    insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     statement = insert(RateBucket).values(key=bucket_key, count=1, expires_at=now() + seconds)
     statement = statement.on_conflict_do_update(
         index_elements=[RateBucket.key], set_={"count": RateBucket.count + 1}

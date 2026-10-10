@@ -156,7 +156,7 @@ def prepare_generation(
     reserve = sum(len(row["content"].encode("utf-8")) + 32 for row in context)
     reserve += settings.max_output_tokens + 256
     day = datetime.now(UTC).date().isoformat()
-    insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+    insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     global_key = digest(f"global-tokens:{day}")
     statement = insert(RateBucket).values(key=global_key, count=reserve, expires_at=now() + 86400)
     global_reserved = db.scalar(

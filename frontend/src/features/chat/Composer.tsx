@@ -37,8 +37,8 @@ type SpeechRecognitionLike = {
 /** Strip provider prefix for a compact button label. */
 function shortName(name: string): string {
   return name
-    .replace(/^Gemini\s+/i, '') // "Gemini 3.5 Flash" → "3.5 Flash"
-    .replace(/^Groq\s+·\s+/i, '') // "Groq · Qwen 3.8 27B" → "Qwen 3.8 27B"
+    .replace(/^Gemini\s+/i, '')
+    .replace(/^Groq\s+·\s+/i, '')
     .trim();
 }
 
@@ -122,8 +122,8 @@ export function Composer({
     instance.start();
   }
 
-  const geminiModels = models.filter((m) => m.name.toLowerCase().includes('gemini'));
-  const groqModels = models.filter((m) => m.name.toLowerCase().includes('groq'));
+  const geminiModels = models.filter((m) => m.provider === 'gemini');
+  const groqModels = models.filter((m) => m.provider === 'groq');
 
   return (
     <Box>

@@ -1,5 +1,7 @@
 export type Appearance = 'light' | 'dark' | 'system';
 export type Contrast = 'standard' | 'high';
+export type ModelProvider = 'gemini' | 'groq';
+export const DEFAULT_MODEL = 'gemini-flash';
 export interface User {
   id: string;
   name: string;
@@ -41,6 +43,7 @@ export interface Page<T> {
 export interface ModelChoice {
   id: string;
   name: string;
+  provider: ModelProvider;
   available: boolean;
 }
 export interface ModelInfo {
@@ -76,4 +79,28 @@ export interface Subscription {
   daily_tokens: number;
   billing_mode: string;
   payment_collection_enabled: boolean;
+}
+export interface SessionView {
+  created_at: number;
+  expires_at: number;
+  current: boolean;
+  source: string;
+  last_active_at: number;
+}
+export interface StoredImage {
+  id: string;
+  name: string;
+  size: number;
+}
+export interface SubscriptionMember {
+  id: string;
+  name: string;
+  email: string;
+  owner: boolean;
+}
+export interface AdminSummary {
+  total_users: number;
+  active_users: number;
+  verified_users: number;
+  administrators: number;
 }
