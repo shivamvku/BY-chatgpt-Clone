@@ -4,6 +4,7 @@ import logging
 import time
 
 import anyio
+import httpx
 from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -28,7 +29,7 @@ def _failure_message(exc: Exception) -> str:
         return "The AI provider rate limit or quota was reached. Retry shortly."
     if status is not None and status >= 500:
         return "The AI provider is temporarily unavailable. Retry shortly."
-    if isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
+    if isinstance(exc, (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException)):
         return "The AI provider timed out. Retry shortly."
     if status is not None and status >= 400:
         return "The AI provider rejected the request. Check the model ID and provider configuration."
