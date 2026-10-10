@@ -17,18 +17,21 @@ def get_engine() -> Engine:
     url = get_settings().database_url
     if not url:
         raise RuntimeError("DATABASE_URL is not configured")
-    
+
     if url.startswith("sqlite"):
-        return create_engine(url, connect_args={"check_same_thread": False}, poolclass=NullPool)
-    else:
         return create_engine(
-            url, 
-            pool_pre_ping=True, 
-            pool_size=5, 
-            max_overflow=5, 
-            pool_timeout=5, 
-            connect_args={"connect_timeout": 5}
+            url,
+            connect_args={"check_same_thread": False},
+            poolclass=NullPool,
         )
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=5,
+        pool_timeout=5,
+        connect_args={"connect_timeout": 5},
+    )
 
 
 def get_db():

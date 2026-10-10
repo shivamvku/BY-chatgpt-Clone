@@ -68,7 +68,7 @@ For browser tests, use an isolated development database, run migrations, start `
 
 ## Real model configuration
 
-Set `GEMINI_API_KEY` for Gemini 2.5 Flash and `GROQ_API_KEY` for Groq's GPT-OSS 20B model. Basic accounts can use Gemini; Pro and Pro Max accounts can choose either model. Use `.env` only for local development. Production keys are GitHub secrets delivered through Terraform to Azure Key Vault and then referenced by the Container App managed identity. Never put provider credentials in frontend configuration.
+Set `GEMINI_API_KEY` and/or `GROQ_API_KEY` for the providers you want to enable. The authoritative model IDs, display names, plan eligibility, and image-support flags live in `backend/app/services/provider.py`; keep this README aligned with that catalogue when models change. Provider credentials are server-only: use `.env` for local development and the documented GitHub Actions/Terraform/Key Vault path for production. Never put provider credentials in frontend configuration. A configured key alone does not prove that a model ID, quota, or production inference path is currently available; verify each provider against its live API before claiming production AI availability.
 
 Without a configured provider key, account and history functions remain available while that model is unavailable. Browser fixtures do not establish real inference verification.
 

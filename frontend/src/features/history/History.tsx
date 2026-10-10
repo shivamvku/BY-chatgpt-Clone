@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   Alert,
@@ -49,6 +49,13 @@ export function History({
   const isAdmin = user?.role === 'admin';
 
   const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Avoid issuing one history request for every keystroke.
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchQuery(search.trim()), 250);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
   const [archived, setArchived] = useState(false);
   const [menu, setMenu] = useState<{
     element: HTMLElement;
@@ -56,11 +63,11 @@ export function History({
   } | null>(null);
 
   const history = useInfiniteQuery({
-    queryKey: ['history', search, archived],
+    queryKey: ['history', searchQuery, archived],
     initialPageParam: '',
     queryFn: ({ pageParam }) =>
       api<Page<Conversation>>(
-        `/conversations?q=${encodeURIComponent(search)}&archived=${archived}&cursor=${encodeURIComponent(pageParam)}`,
+        `/conversations?q=${encodeURIComponent(searchQuery)}&archived=${archived}&cursor=${encodeURIComponent(pageParam)}`,
       ),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
   });

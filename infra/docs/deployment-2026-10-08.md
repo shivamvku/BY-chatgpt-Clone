@@ -1,5 +1,7 @@
 # Development deployment: 8 October 2026
 
+> Historical snapshot of the infrastructure state on this date, not a statement of current deployment status. See [the implementation plan](../../docs/implementation-plan.md) and the latest GitHub Actions release run for current verification.
+
 ## Bootstrap
 
 The Central US bootstrap was reviewed and applied through Terraform. Two resource groups, state storage, GitHub plan/deploy identities, federation and scoped roles were created. State migration to Azure Blob Storage succeeded; a subsequent plan reported no changes.
