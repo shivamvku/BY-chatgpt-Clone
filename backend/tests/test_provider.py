@@ -13,7 +13,7 @@ def test_gemini_protocol(monkeypatch):
 
     def handler(request):
         assert request.url.path.endswith(":streamGenerateContent")
-        assert "/gemini-2.5-flash:" in request.url.path
+        assert "/gemini-3.5-flash-lite:" in request.url.path
         # Key is sent via header, not query param (see x-goog-api-key usage in provider)
         assert request.headers["x-goog-api-key"] == "test-only-key"
         payload = (
@@ -48,6 +48,7 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
     def handler(request):
         assert request.url.host == "api.groq.com"
         assert request.headers["authorization"] == "Bearer test-only-key"
+        assert request.read().decode() and b"openai/gpt-oss-120b" in request.read()
         return httpx.Response(
             200, content=b'data: {"choices":[{"delta":{"content":"hello"}}]}\n\ndata: [DONE]\n\n'
         )
@@ -67,7 +68,7 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
         ]
 
     assert asyncio.run(collect()) == ["hello"]
-    # Basic includes all available models now: Gemini Flash, Gemini Pro, Groq Fast, Groq Mixtral
+    # Basic includes the current Gemini and Groq catalogue.
     ids = [row["id"] for row in provider.choices("basic")]
     expected_basic = ["gemini-flash", "gemini-pro", "groq-fast", "groq-mixtral"]
     assert ids == expected_basic
