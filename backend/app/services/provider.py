@@ -25,7 +25,7 @@ MODELS: dict[str, dict] = {
     },
     "gemini-pro": {
         "name": "Gemini 3.8 Flash",
-        "provider": "gemini", 
+        "provider": "gemini",
         "plans": {"basic", "pro", "pro_max"},
         "priority": 15,
         "api_model": "gemini-3.8-flash",
