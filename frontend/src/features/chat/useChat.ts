@@ -161,10 +161,10 @@ export function useChat(id: string | null, select: (id: string) => void, selecte
           updated_at: now,
         };
         const assistantPlaceholder: Message = { ...answer, content: '' };
-        queries.setQueryData<Message[]>(['messages', conversationId], [
-          optimisticUser,
-          assistantPlaceholder,
-        ]);
+        queries.setQueryData<Message[]>(
+          ['messages', conversationId],
+          [optimisticUser, assistantPlaceholder],
+        );
         select(conversationId);
       } else {
         // For existing conversations, optimistically append the new user
