@@ -1,20 +1,20 @@
 name: Infrastructure
-"on":
-  pull_request: null
-  push:
-    branches:
-      - main
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
   workflow_dispatch:
     inputs:
       stack:
-        description: Infrastructure state to operate on
+        description: Infrastructure stack
         type: choice
         options:
           - foundation
           - domains
         default: foundation
       action:
-        description: Plan or apply the selected state
+        description: Action to perform
         type: choice
         options:
           - plan
@@ -22,17 +22,18 @@ name: Infrastructure
           - start-db-access
           - stop-db-access
         default: plan
+
 permissions:
   contents: read
+
 concurrency:
-  group:
-    ${{ github.event_name == 'workflow_dispatch' && 'azure-dev-deployment' || format('infrastructure-{0}', github.ref)
-    }}
+  group: infrastructure-${{ inputs.stack || 'validation' }}
   cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 env:
   ARM_USE_OIDC: "true"
   ARM_USE_AZUREAD: "true"
-  ARM_CLIENT_ID: ${{ inputs.action != 'plan' && github.event_name == 'workflow_dispatch' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
+  ARM_CLIENT_ID: ${{ inputs.action == 'apply' && vars.AZURE_DEPLOY_CLIENT_ID || vars.AZURE_PLAN_CLIENT_ID }}
   ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
   ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
   TF_STATE_RESOURCE_GROUP: ${{ vars.TF_STATE_RESOURCE_GROUP }}
@@ -43,28 +44,29 @@ env:
   AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   TF_VAR_resource_group_name: ${{ vars.AZURE_RESOURCE_GROUP }}
   TF_VAR_name: ${{ vars.AZURE_APP_NAME }}
-  BUDGET_ALERT_EMAIL: ${{ vars.AZURE_BUDGET_ALERT_EMAIL }}
   TF_VAR_deploy_principal_id: ${{ vars.AZURE_DEPLOY_PRINCIPAL_ID }}
   TF_VAR_plan_principal_id: ${{ vars.AZURE_PLAN_PRINCIPAL_ID }}
-  TF_VAR_operator_principal_id: ${{ vars.AZURE_OPERATOR_PRINCIPAL_ID }}
+
 jobs:
   validate:
-    name: 1 · Terraform validation and policy tests
+    name: Terraform Validation
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.13.5
-      - run: bash infra/pipelines/validate.sh
-    timeout-minutes: 15
-  provision:
-    name: 2 · Terraform plan and apply
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+      - name: Validate Terraform
+        run: bash infra/pipelines/validate.sh
+    timeout-minutes: 10
+
+  infrastructure:
+    name: ${{ inputs.action == 'apply' && 'Apply' || inputs.action == 'plan' && 'Plan' || inputs.action }} ${{ inputs.stack }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: validate
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    environment: ${{ inputs.action != 'plan' && 'infra-deploy' || 'infra-plan' }}
+    environment: ${{ inputs.action == 'apply' && 'infra-deploy' || 'infra-plan' }}
+    timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
@@ -77,24 +79,12 @@ jobs:
       TF_VAR_db_access_cidr: ${{ vars.DB_ACCESS_CIDR }}
       TF_VAR_db_access_public_key: ${{ vars.DB_ACCESS_PUBLIC_KEY }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@v4
       - uses: ./infra/actions/azure
-      - run: bash infra/pipelines/infrastructure.sh
-  verify:
-    name: 3 · Verify infrastructure
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.action != 'plan' }}
-    needs: provision
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: infra-deploy
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      STACK: ${{ inputs.stack }}
-      AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME }}
-      ACTION: ${{ inputs.action }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: ./infra/actions/azure
-      - run: bash infra/pipelines/verify-infrastructure.sh
+      - name: Run infrastructure operation
+        run: bash infra/pipelines/infrastructure.sh
+      - name: Verify infrastructure
+        if: ${{ inputs.action == 'apply' }}
+        env:
+          AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME }}
+        run: bash infra/pipelines/verify-infrastructure.sh

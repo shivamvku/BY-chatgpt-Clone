@@ -21,33 +21,40 @@ import Add from '@mui/icons-material/Add';
 import Search from '@mui/icons-material/Search';
 import MoreHoriz from '@mui/icons-material/MoreHoriz';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
+import AdminPanelSettings from '@mui/icons-material/AdminPanelSettings';
 import { api } from '../../shared/api';
 import type { Conversation, Page } from '../../shared/types';
 import { useAuth } from '../auth/AuthProvider';
 
-export function History({
-  active,
-  disabled,
-  onSelect,
-  onNew,
-  onSettings,
-  onAction,
-}: {
+interface HistoryProps {
   active: string | null;
   disabled: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
   onSettings: () => void;
+  onAdmin: () => void;
   onAction: (row: Conversation, action: string) => void;
-}) {
-  const { user } = useAuth(),
-    queries = useQueryClient();
-  const [search, setSearch] = useState(''),
-    [archived, setArchived] = useState(false),
-    [menu, setMenu] = useState<{
-      element: HTMLElement;
-      row: Conversation;
-    } | null>(null);
+}
+
+export function History({ 
+  active, 
+  disabled, 
+  onSelect, 
+  onNew, 
+  onSettings, 
+  onAdmin, 
+  onAction 
+}: HistoryProps) {
+  const { user } = useAuth();
+  const queries = useQueryClient();
+  
+  const [search, setSearch] = useState('');
+  const [archived, setArchived] = useState(false);
+  const [menu, setMenu] = useState<{
+    element: HTMLElement;
+    row: Conversation;
+  } | null>(null);
+
   const history = useInfiniteQuery({
     queryKey: ['history', search, archived],
     initialPageParam: '',
@@ -57,6 +64,11 @@ export function History({
       ),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
   });
+
+  const handleMenuAction = async (row: Conversation, action: string) => {
+    setMenu(null);
+    onAction(row, action);
+  };
   return (
     <Stack height="100%" p={2} gap={2} bgcolor="background.paper">
       <Typography variant="h6" fontWeight={800} color="primary" px={1} py={1}>
@@ -143,6 +155,16 @@ export function History({
       >
         {user?.name}
       </Button>
+      {user?.role === 'admin' && (
+        <Button
+          startIcon={<AdminPanelSettings />}
+          onClick={onAdmin}
+          sx={{ justifyContent: 'flex-start' }}
+          color="primary"
+        >
+          Admin Panel
+        </Button>
+      )}
       <Menu open={!!menu} anchorEl={menu?.element} onClose={() => setMenu(null)}>
         {[
           'Rename',
@@ -153,12 +175,7 @@ export function History({
         ].map((action) => (
           <MenuItem
             key={action}
-            onClick={() => {
-              if (menu) onAction(menu.row, action);
-              setMenu(null);
-              if (action === 'Archive' || action === 'Unarchive')
-                void queries.invalidateQueries({ queryKey: ['history'] });
-            }}
+            onClick={() => menu && handleMenuAction(menu.row, action)}
           >
             {action}
           </MenuItem>

@@ -63,10 +63,17 @@ def register(*, data: Registration, request: Request, response: Response, db: Se
         db.flush()
         provision_basic(db, user)
         csrf = new_session(db, user, response, request)
+        
+        # Skip email verification in local development
+        if get_settings().skip_email_verification:
+            user.verified_user = True
+            user.email_verified_at = now()
+            db.commit()
+        else:
+            account_recovery.issue(db, user, "verify")
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "Unable to register with these details") from None
-    account_recovery.issue(db, user, "verify")
     return {"user": UserView.model_validate(user), "csrf": csrf}
 
 

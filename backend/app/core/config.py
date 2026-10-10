@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     max_output_tokens: int = Field(1024, ge=64, le=4096)
     max_context_chars: int = Field(24000, ge=1000, le=48000)
     generation_timeout: int = Field(120, ge=10, le=300)
+    skip_email_verification: bool = False
 
     @property
     def secure_cookies(self) -> bool:

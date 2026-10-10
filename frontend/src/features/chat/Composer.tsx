@@ -29,9 +29,9 @@ export function Composer({
   onSend: (content: string) => Promise<boolean>;
   onStop: () => void;
 }) {
-  const [text, setText] = useState(''),
-    [uploading, setUploading] = useState(false),
-    [error, setError] = useState('');
+  const [text, setText] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function submit(event?: FormEvent) {
@@ -92,7 +92,14 @@ export function Composer({
           }}
           sx={{
             '& fieldset': { border: 0 },
-            '& .MuiInputBase-root': { p: 0.5 },
+            '& .MuiInputBase-root': { 
+              p: 0.5,
+            },
+            '& .MuiInputBase-input': {
+              '&:focus': {
+                outline: 'none',
+              },
+            },
           }}
         />
         <Stack direction="row" justifyContent="space-between" alignItems="center">

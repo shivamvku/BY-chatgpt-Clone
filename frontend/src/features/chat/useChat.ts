@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { api, streamResponse } from '../../shared/api';
 import { DEFAULT_MODEL, type Conversation, type Message } from '../../shared/types';
 
-export function useChat(id: string | null, select: (id: string) => void) {
+export function useChat(id: string | null, select: (id: string) => void, selectedModel?: string) {
   const queries = useQueryClient(),
     [busy, setBusy] = useState(false),
     [generating, setGenerating] = useState(false),
@@ -99,7 +99,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       void queries.refetchQueries({ queryKey: ['usage'], type: 'active' });
     }
   }
-  async function send(content: string, parentId: string | null, model = DEFAULT_MODEL) {
+  async function send(content: string, parentId: string | null, model = selectedModel || DEFAULT_MODEL) {
     if (submission.current) return false;
     submission.current = true;
     setBusy(true);
@@ -203,7 +203,7 @@ export function useChat(id: string | null, select: (id: string) => void) {
       return false;
     }
   }
-  async function regenerate(message: Message, model = message.model || DEFAULT_MODEL) {
+  async function regenerate(message: Message, model = selectedModel || message.model || DEFAULT_MODEL) {
     if (!id || submission.current) return;
     submission.current = true;
     setBusy(true);

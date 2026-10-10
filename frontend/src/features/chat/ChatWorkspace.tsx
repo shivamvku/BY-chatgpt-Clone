@@ -1,91 +1,86 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  AppBar,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Drawer,
-  IconButton,
-  Stack,
-  TextField,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-} from '@mui/material';
-import MenuOutlined from '@mui/icons-material/MenuOutlined';
-import Add from '@mui/icons-material/Add';
+import { Box, Container, Stack } from '@mui/material';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+
+// Components
+import { ChatHeader } from './components/ChatHeader';
+import { ChatMessages } from './components/ChatMessages';
+import { ConversationDialog } from './components/ConversationDialog';
 import { History } from '../history/History';
 import { SettingsDialog } from '../settings/SettingsDialog';
+import { AdminPanel } from '../admin/AdminPanel';
 import { Composer } from './Composer';
-import { MessageCard } from './MessageCard';
+import { SkipLink } from './components/SkipLink';
+
+// Hooks
 import { useChat } from './useChat';
-import { visibleBranch } from './branches';
+import { useAuth } from '../auth/AuthProvider';
+
+// Utils
 import { api, request } from '../../shared/api';
 import type { Conversation, ModelInfo } from '../../shared/types';
 
 export default function ChatWorkspace() {
-  const [active, setActive] = useState<string | null>(null),
-    [drawer, setDrawer] = useState(false),
-    [settings, setSettings] = useState(false),
-    [dialog, setDialog] = useState<{
-      row: Conversation;
-      action: string;
-    } | null>(null),
-    [title, setTitle] = useState(''),
-    [actionError, setActionError] = useState('');
+  // State
+  const [active, setActive] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [settings, setSettings] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [dialog, setDialog] = useState<{
+    conversation: Conversation;
+    action: 'Delete' | 'Rename';
+  } | null>(null);
 
-  const wide = useMediaQuery('(min-width:900px)'),
-    queries = useQueryClient();
+  // Hooks
+  const queries = useQueryClient();
+  const { user } = useAuth();
 
-  const select = (id: string) => {
-    setActive(id);
-    setDrawer(false);
-  };
+  // Data fetching
+  const models = useQuery({
+    queryKey: ['models'],
+    queryFn: () => api<ModelInfo>('/models'),
+  });
 
-  const chat = useChat(active, select),
-    models = useQuery({
-      queryKey: ['models'],
-      queryFn: () => api<ModelInfo>('/models'),
-    });
+  const chat = useChat(active, setActive, selectedModel);
 
-  const visible = visibleBranch(chat.messages.data || [], chat.leaf),
-    scroll = useRef<HTMLDivElement>(null),
-    nearBottom = useRef(true);
-
+  // Set default model
   useEffect(() => {
-    if (nearBottom.current) scroll.current?.scrollTo({ top: scroll.current.scrollHeight });
-  }, [chat.messages.data]);
+    if (models.data?.models.length && !selectedModel) {
+      setSelectedModel(models.data.models[0].id);
+    }
+  }, [models.data, selectedModel]);
 
-  function newChat() {
+  // Chat actions
+  const newChat = useCallback(() => {
     setActive(null);
     chat.setLeaf(null);
     chat.setError('');
-    setDrawer(false);
-  }
+  }, [chat]);
 
-  async function historyAction(row: Conversation, action: string) {
+  const selectConversation = useCallback((id: string) => {
+    setActive(id);
+    chat.setLeaf(null);
+  }, [chat]);
+
+  // History actions
+  const handleHistoryAction = useCallback(async (row: Conversation, action: string) => {
     setActionError('');
+    
     if (action === 'Delete' || action === 'Rename') {
-      setDialog({ row, action });
-      setTitle(row.title);
+      setDialog({ conversation: row, action });
       return;
     }
+
     try {
       if (action.startsWith('Export')) {
-        const response = await request(
-          `/conversations/${row.id}/export?format=${action.endsWith('JSON') ? 'json' : 'markdown'}`,
-        );
+        const format = action.endsWith('JSON') ? 'json' : 'markdown';
+        const response = await request(`/conversations/${row.id}/export?format=${format}`);
         const url = URL.createObjectURL(await response.blob());
         const link = document.createElement('a');
         link.href = url;
-        link.download = `conversation.${action.endsWith('JSON') ? 'json' : 'md'}`;
+        link.download = `conversation.${format === 'json' ? 'json' : 'md'}`;
         link.click();
         URL.revokeObjectURL(url);
       } else {
@@ -98,226 +93,112 @@ export default function ChatWorkspace() {
     } catch (failure) {
       setActionError((failure as Error).message);
     }
-  }
+  }, [active, newChat, queries]);
 
-  async function confirmAction() {
+  // Dialog actions
+  const handleDialogConfirm = useCallback(async (title?: string) => {
     if (!dialog) return;
+
     try {
-      await api(
-        `/conversations/${dialog.row.id}`,
-        dialog.action === 'Delete' ? 'DELETE' : 'PATCH',
-        dialog.action === 'Delete' ? undefined : { title },
-      );
-      if (dialog.action === 'Delete' && active === dialog.row.id) newChat();
+      if (dialog.action === 'Delete') {
+        await api(`/conversations/${dialog.conversation.id}`, 'DELETE');
+        if (active === dialog.conversation.id) newChat();
+      } else if (dialog.action === 'Rename' && title) {
+        await api(`/conversations/${dialog.conversation.id}`, 'PATCH', { title });
+      }
       await queries.invalidateQueries({ queryKey: ['history'] });
       setDialog(null);
     } catch (failure) {
       setActionError((failure as Error).message);
     }
-  }
+  }, [dialog, active, newChat, queries]);
 
-  const history = (
-    <History
-      active={active}
-      disabled={chat.busy}
-      onNew={newChat}
-      onSelect={(id) => {
-        select(id);
-        chat.setLeaf(null);
-        nearBottom.current = true;
-      }}
-      onSettings={() => {
-        setDrawer(false);
-        setSettings(true);
-      }}
-      onAction={(row, action) => void historyAction(row, action)}
-    />
-  );
+  // Context value for components that need chat state
+  const chatContextValue = {
+    active,
+    selectedModel,
+    setSelectedModel,
+    chat,
+    models,
+    newChat,
+    selectConversation,
+    actionError,
+    setActionError,
+  };
 
   return (
-    <Box display="flex" height="100dvh" overflow="hidden">
-      <Box
-        component="a"
-        href="#composer"
-        sx={{
-          position: 'absolute',
-          left: -9999,
-          '&:focus': {
-            left: 16,
-            top: 16,
-            zIndex: 2000,
-            bgcolor: 'background.paper',
-            p: 2,
-          },
-        }}
-      >
-        Skip to message composer
-      </Box>
-
-      <Drawer
-        variant={wide ? 'permanent' : 'temporary'}
-        open={wide || drawer}
-        onClose={() => setDrawer(false)}
-        sx={{
-          width: wide ? 280 : 0,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box' },
-        }}
-      >
-        {history}
-      </Drawer>
-
-      <Stack component="main" flex={1} minWidth={0}>
-        <AppBar
-          position="static"
-          color="transparent"
-          elevation={0}
-          sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
-        >
-          <Toolbar>
-            {!wide && (
-              <IconButton aria-label="Open conversations" onClick={() => setDrawer(true)}>
-                <MenuOutlined />
-              </IconButton>
-            )}
-            <Typography fontWeight={700} flex={1}>
-              {models.data?.models[0]?.name || 'YounderChat'}
-            </Typography>
-            <IconButton aria-label="New conversation" disabled={chat.busy} onClick={newChat}>
-              <Add />
-            </IconButton>
-          </Toolbar>
-        </AppBar>
-
-        <Box
-          ref={scroll}
-          onScroll={() => {
-            const element = scroll.current;
-            if (element)
-              nearBottom.current =
-                element.scrollHeight - element.scrollTop - element.clientHeight < 120;
-          }}
-          flex={1}
-          overflow="auto"
-        >
-          <Container maxWidth="md" sx={{ py: 3 }}>
-            {actionError && (
-              <Alert severity="error" onClose={() => setActionError('')}>
-                {actionError}
-              </Alert>
-            )}
-            {(chat.error || chat.messages.isError) && (
-              <Alert severity="error" onClose={() => chat.setError('')}>
-                {chat.error || 'Could not load messages. Retry by selecting this conversation.'}
-              </Alert>
-            )}
-            {models.data && !models.data.configured && (
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Chat is currently unavailable. Your account, settings, and saved conversations are
-                still accessible. Please contact your administrator.
-              </Alert>
-            )}
-            {models.isError && (
-              <Alert
-                severity="error"
-                action={<Button onClick={() => void models.refetch()}>Retry</Button>}
-              >
-                Could not load model configuration.
-              </Alert>
-            )}
-            {chat.messages.isLoading ? (
-              <CircularProgress aria-label="Loading conversation" />
-            ) : visible.length ? (
-              visible.map((message) => (
-                <MessageCard
-                  key={message.id}
-                  message={message}
-                  all={chat.messages.data || []}
-                  busy={chat.busy}
-                  onSelect={chat.setLeaf}
-                  onEdit={(row, content) => void chat.send(content, row.parent_id)}
-                  onRegenerate={(row) => void chat.regenerate(row)}
-                  onStop={(row) => void chat.stopMessage(row)}
-                />
-              ))
-            ) : (
-              <Stack minHeight="45vh" justifyContent="center" alignItems="center" gap={2}>
-                <Typography variant="overline" color="primary" fontWeight={800}>
-                  A little curiosity goes a long way
-                </Typography>
-                <Typography variant="h4" textAlign="center">
-                  What will you explore today?
-                </Typography>
-                <Typography color="text.secondary" textAlign="center">
-                  Start with a question. Build on an idea. Make something clearer.
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} mt={2}>
-                  {[
-                    'Explain a complex idea',
-                    'Help me make a plan',
-                    'Explore a new perspective',
-                  ].map((prompt) => (
-                    <Button
-                      key={prompt}
-                      variant="outlined"
-                      disabled={chat.busy || !models.data?.configured}
-                      onClick={() => void chat.send(prompt, null)}
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
-                </Stack>
-              </Stack>
-            )}
-          </Container>
-        </Box>
-
-        <Container maxWidth="md" id="composer" sx={{ pb: 2, pt: 1 }}>
-          <Composer
-            busy={chat.busy}
-            canStop={chat.generating}
-            enabled={!!models.data?.configured}
-            onStop={() => void chat.stop()}
-            onSend={(content) => chat.send(content, visible.at(-1)?.id || null)}
-          />
-        </Container>
-      </Stack>
-
-      {settings && <SettingsDialog open onClose={() => setSettings(false)} />}
-
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} fullWidth>
-        <DialogTitle>
-          {dialog?.action === 'Delete' ? 'Delete conversation?' : 'Rename conversation'}
-        </DialogTitle>
-        <DialogContent>
-          {dialog?.action === 'Delete' ? (
-            <Typography>
-              This permanently removes the conversation and all its message branches.
-            </Typography>
-          ) : (
-            <TextField
-              autoFocus
-              label="Conversation title"
-              fullWidth
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              inputProps={{ maxLength: 120 }}
-              sx={{ mt: 1 }}
+    <Box height="100dvh">
+      <SkipLink />
+      
+      <PanelGroup direction="horizontal">
+        {/* Sidebar */}
+        <Panel defaultSize={20} minSize={15} maxSize={35}>
+          <Box height="100dvh" bgcolor="background.paper">
+            <History
+              active={active}
+              disabled={chat.busy}
+              onSelect={selectConversation}
+              onNew={newChat}
+              onSettings={() => setSettings(true)}
+              onAdmin={() => setAdmin(true)}
+              onAction={handleHistoryAction}
             />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color={dialog?.action === 'Delete' ? 'error' : 'primary'}
-            disabled={!title.trim()}
-            onClick={() => void confirmAction()}
-          >
-            {dialog?.action === 'Delete' ? 'Delete' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </Box>
+        </Panel>
+
+        <PanelResizeHandle
+          style={{
+            width: 2,
+            backgroundColor: 'var(--mui-palette-divider)',
+          }}
+        />
+
+        {/* Main Chat */}
+        <Panel defaultSize={80}>
+          <Stack height="100dvh" bgcolor="background.default">
+            <ChatHeader 
+              models={models}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              chat={chat}
+              newChat={newChat}
+              user={user}
+              onAdminClick={() => setAdmin(true)}
+            />
+            
+            <ChatMessages 
+              chat={chat}
+              models={models}
+              selectedModel={selectedModel}
+              active={active}
+              actionError={actionError}
+              setActionError={setActionError}
+            />
+            
+            <Container maxWidth="md" id="composer" sx={{ pb: 2, pt: 1 }}>
+              <Composer
+                busy={chat.busy}
+                canStop={chat.generating}
+                enabled={!!models.data?.configured}
+                onStop={() => void chat.stop()}
+                onSend={(content) => chat.send(content, null)}
+              />
+            </Container>
+          </Stack>
+        </Panel>
+      </PanelGroup>
+
+      {/* Dialogs */}
+      <SettingsDialog open={settings} onClose={() => setSettings(false)} />
+      {admin && user?.role === 'admin' && <AdminPanel />}
+      
+      <ConversationDialog
+        open={!!dialog}
+        conversation={dialog?.conversation || null}
+        action={dialog?.action || 'Delete'}
+        onClose={() => setDialog(null)}
+        onConfirm={handleDialogConfirm}
+      />
     </Box>
   );
 }
