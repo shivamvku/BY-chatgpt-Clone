@@ -90,7 +90,7 @@ jobs:
   # PR validation or deployment while flaky browser interactions are investigated.
   # Backend and frontend checks remain required; restore blocking E2E after stabilizing.
   browser-tests:
-    name: Browser Tests (non-blocking temporarily)
+    name: Browser Tests
     continue-on-error: true
     runs-on: ubuntu-24.04
     needs: [backend-tests, frontend-tests]
