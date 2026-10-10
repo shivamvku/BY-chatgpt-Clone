@@ -28,12 +28,7 @@ interface AdminUsersTableProps {
   onAssign: (id: string, plan: string) => void;
 }
 
-export function AdminUsersTable({
-  currentUserId,
-  busy,
-  onChange,
-  onAssign,
-}: AdminUsersTableProps) {
+export function AdminUsersTable({ currentUserId, busy, onChange, onAssign }: AdminUsersTableProps) {
   const [after, setAfter] = useState('');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
