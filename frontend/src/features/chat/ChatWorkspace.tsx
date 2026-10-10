@@ -45,10 +45,16 @@ export default function ChatWorkspace() {
 
   const chat = useChat(active, setActive, selectedModel);
 
-  // Set default model
+  // Select an available model by default, and recover if the current model
+  // becomes unavailable after model configuration is refreshed.
   useEffect(() => {
-    if (models.data?.models.length && !selectedModel) {
-      setSelectedModel(models.data.models[0].id);
+    const choices = models.data?.models;
+    if (!choices?.length) return;
+
+    const current = choices.find((model) => model.id === selectedModel);
+    if (!current?.available) {
+      const next = choices.find((model) => model.available) ?? choices[0];
+      if (next.id !== selectedModel) setSelectedModel(next.id);
     }
   }, [models.data, selectedModel]);
 
