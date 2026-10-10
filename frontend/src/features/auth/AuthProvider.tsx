@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up WebSocket for real-time session management
     const ws = getSessionWebSocket();
     
-    const handleSessionExpired = (data: unknown) => {
+    const handleSessionExpired = () => {
       console.log('Session expired via WebSocket');
       setUser(null);
       queries.clear();
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sessionData.user);
     };
     
-    const handleLogout = (data: unknown) => {
+    const handleLogout = () => {
       console.log('Logout notification via WebSocket');
       setUser(null);
       queries.clear();
