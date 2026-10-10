@@ -86,12 +86,11 @@ jobs:
         working-directory: frontend
     timeout-minutes: 10
 
-  # Temporary safety valve: run E2E tests and report failures, but do not block
-  # PR validation or deployment while flaky browser interactions are investigated.
-  # Backend and frontend checks remain required; restore blocking E2E after stabilizing.
+  # Browser coverage is a required quality gate for PRs and production deployment.
+  # If this becomes flaky, fix or isolate the test rather than allowing deployment
+  # to proceed after a failed browser suite.
   browser-tests:
     name: Browser Tests
-    continue-on-error: true
     runs-on: ubuntu-24.04
     needs: [backend-tests, frontend-tests]
     services:
