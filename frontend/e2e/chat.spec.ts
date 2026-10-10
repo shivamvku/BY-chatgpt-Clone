@@ -41,6 +41,7 @@ test('stream, persist, branch, export, archive and delete a conversation', async
     .fill('What are the next steps?');
   await page.getByRole('button', { name: 'Send message', exact: true }).click();
   await expect(page.getByText('What are the next steps?', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden();
   await expect(earlierPrompt).toBeVisible();
 
   // Verify that the earlier turn remains reachable by scrolling the message pane.
