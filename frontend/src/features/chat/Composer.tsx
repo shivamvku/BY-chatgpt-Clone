@@ -34,6 +34,8 @@ type SpeechRecognitionLike = {
   onerror: () => void;
 };
 
+const MODEL_MENU_HEIGHT = 3 * 48 + 32;
+
 /** Strip provider prefix for a compact button label. */
 function shortName(name: string): string {
   return name
@@ -168,6 +170,7 @@ export function Composer({
           sx={{
             '& fieldset': { border: 0 },
             '& .MuiInputBase-root': { p: 0.75 },
+            '& .MuiInputBase-input:focus-visible': { outline: 'none' },
             '& textarea::placeholder': { color: 'text.secondary', opacity: 0.7 },
           }}
         />
@@ -252,7 +255,10 @@ export function Composer({
               onClose={() => setMenuAnchor(null)}
               anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
               transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              slotProps={{ paper: { sx: { maxHeight: 300, overflowY: 'auto', minWidth: 200 } } }}
+              slotProps={{
+                paper: { sx: { maxHeight: MODEL_MENU_HEIGHT, minWidth: 200, overflow: 'hidden' } },
+                list: { sx: { maxHeight: MODEL_MENU_HEIGHT, overflowY: 'auto' } },
+              }}
             >
               {/* Gemini group */}
               {geminiModels.length > 0 && (
