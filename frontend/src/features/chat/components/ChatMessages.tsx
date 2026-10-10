@@ -80,7 +80,15 @@ export function ChatMessages({
   ];
 
   return (
-    <Box ref={scroll} onScroll={handleScroll} flex={1} minHeight={0} minWidth={0} overflow="auto">
+    <Box
+      ref={scroll}
+      data-testid="chat-messages-scroll"
+      onScroll={handleScroll}
+      flex={1}
+      minHeight={0}
+      minWidth={0}
+      overflow="auto"
+    >
       <Container maxWidth="md" sx={{ py: 3 }}>
         {/* Error Messages */}
         {actionError && (
