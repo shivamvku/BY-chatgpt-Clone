@@ -9,7 +9,7 @@ import { ChatMessages } from './components/ChatMessages';
 import { ConversationDialog } from './components/ConversationDialog';
 import { History } from '../history/History';
 import { SettingsDialog } from '../settings/SettingsDialog';
-import { AdminPanel } from '../admin/AdminPanel';
+import { AdminPage } from '../admin/AdminPage';
 import { Composer } from './Composer';
 import { SkipLink } from './components/SkipLink';
 
@@ -126,6 +126,11 @@ export default function ChatWorkspace() {
     setActionError,
   };
 
+  // Show admin page if admin is true
+  if (admin && user?.role === 'admin') {
+    return <AdminPage onBack={() => setAdmin(false)} />;
+  }
+
   return (
     <Box height="100dvh">
       <SkipLink />
@@ -157,11 +162,6 @@ export default function ChatWorkspace() {
         <Panel defaultSize={80}>
           <Stack height="100dvh" bgcolor="background.default">
             <ChatHeader 
-              models={models}
-              selectedModel={selectedModel}
-              setSelectedModel={setSelectedModel}
-              chat={chat}
-              newChat={newChat}
               user={user}
               onAdminClick={() => setAdmin(true)}
             />
@@ -180,6 +180,9 @@ export default function ChatWorkspace() {
                 busy={chat.busy}
                 canStop={chat.generating}
                 enabled={!!models.data?.configured}
+                models={models}
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
                 onStop={() => void chat.stop()}
                 onSend={(content) => chat.send(content, null)}
               />
@@ -190,7 +193,6 @@ export default function ChatWorkspace() {
 
       {/* Dialogs */}
       <SettingsDialog open={settings} onClose={() => setSettings(false)} />
-      {admin && user?.role === 'admin' && <AdminPanel />}
       
       <ConversationDialog
         open={!!dialog}

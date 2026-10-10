@@ -4,6 +4,8 @@ import {
   Box,
   Button,
   IconButton,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -13,6 +15,7 @@ import {
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
 import StopRounded from '@mui/icons-material/StopRounded';
 import AttachFile from '@mui/icons-material/AttachFile';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import type { FormEvent } from 'react';
 import { request } from '../../shared/api';
 
@@ -20,18 +23,25 @@ export function Composer({
   busy,
   canStop,
   enabled,
+  models,
+  selectedModel,
+  onModelChange,
   onSend,
   onStop,
 }: {
   busy: boolean;
   canStop: boolean;
   enabled: boolean;
+  models: any;
+  selectedModel: string;
+  onModelChange: (modelId: string) => void;
   onSend: (content: string) => Promise<boolean>;
   onStop: () => void;
 }) {
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [modelMenu, setModelMenu] = useState<HTMLElement | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function submit(event?: FormEvent) {
@@ -72,6 +82,58 @@ export function Composer({
           {error}
         </Alert>
       )}
+      
+      {/* Model Selection - ChatGPT Style */}
+      {models.data?.configured && models.data.models.length > 0 && (
+        <Box mb={2} display="flex" justifyContent="center">
+          <Button
+            variant="outlined"
+            size="small"
+            endIcon={<KeyboardArrowDown />}
+            onClick={(e) => setModelMenu(e.currentTarget)}
+            sx={{ 
+              borderRadius: 3,
+              textTransform: 'none',
+              minWidth: 200,
+              bgcolor: 'background.paper'
+            }}
+          >
+            {models.data.models.find((m: any) => m.id === selectedModel)?.name || 'Select Model'}
+          </Button>
+          <Menu
+            anchorEl={modelMenu}
+            open={!!modelMenu}
+            onClose={() => setModelMenu(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+            PaperProps={{
+              sx: { borderRadius: 2, minWidth: 250 }
+            }}
+          >
+            {models.data.models.map((model: any) => (
+              <MenuItem
+                key={model.id}
+                selected={model.id === selectedModel}
+                onClick={() => {
+                  onModelChange(model.id);
+                  setModelMenu(null);
+                }}
+                sx={{ py: 1.5 }}
+              >
+                <Box>
+                  <Typography variant="body2" fontWeight={500}>
+                    {model.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {model.provider}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Menu>
+        </Box>
+      )}
+      
       <Paper component="form" onSubmit={submit} variant="outlined" sx={{ p: 1.5, borderRadius: 4 }}>
         <TextField
           fullWidth

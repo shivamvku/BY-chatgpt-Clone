@@ -71,9 +71,6 @@ export function History({
   };
   return (
     <Stack height="100%" p={2} gap={2} bgcolor="background.paper">
-      <Typography variant="h6" fontWeight={800} color="primary" px={1} py={1}>
-        YounderChat
-      </Typography>
       <Button variant="contained" startIcon={<Add />} disabled={disabled} onClick={onNew}>
         New conversation
       </Button>
