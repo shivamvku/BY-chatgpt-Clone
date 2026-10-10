@@ -9,8 +9,18 @@ from app.services.security import hasher
 from app.services.subscriptions import provision_basic
 
 DEMO_ACCOUNTS = (
-    {"email": "admin@younderchat.local", "name": "Local Demo Admin", "password": "AdminDemo!2026", "role": "admin"},
-    {"email": "user@younderchat.local", "name": "Local Demo User", "password": "UserDemo!2026", "role": "user"},
+    {
+        "email": "admin@younderchat.local",
+        "name": "Local Demo Admin",
+        "password": "AdminDemo!2026",
+        "role": "admin",
+    },
+    {
+        "email": "user@younderchat.local",
+        "name": "Local Demo User",
+        "password": "UserDemo!2026",
+        "role": "user",
+    },
 )
 
 
@@ -24,9 +34,12 @@ def main() -> None:
             user = db.scalar(select(User).where(User.email == account["email"]))
             if user is None:
                 user = User(
-                    email=account["email"], name=account["name"],
+                    email=account["email"],
+                    name=account["name"],
                     password_hash=hasher.hash(account["password"]),
-                    role=account["role"], active=True, verified_user=True,
+                    role=account["role"],
+                    active=True,
+                    verified_user=True,
                 )
                 db.add(user)
                 db.flush()
