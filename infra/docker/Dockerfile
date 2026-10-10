@@ -9,7 +9,7 @@ FROM python:3.12-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SERVE_FRONTEND=true APP_ENV=production
 WORKDIR /app/backend
 COPY backend/ ./
-RUN pip install --no-cache-dir -r requirements.lock && pip install --no-cache-dir --no-deps . && useradd --uid 10001 --create-home appuser
+RUN pip install --no-cache-dir -r requirements.lock && pip install --no-cache-dir 'uvicorn[standard]' && pip install --no-cache-dir --no-deps . && useradd --uid 10001 --create-home appuser
 COPY --from=frontend /build/frontend/dist /app/frontend/dist
 USER 10001
 EXPOSE 8000

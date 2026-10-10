@@ -22,12 +22,26 @@ MODELS: dict[str, dict] = {
         "priority": 10,
         "api_model": "gemini-2.5-flash",
     },
+    "gemini-pro": {
+        "name": "Gemini 1.5 Pro",
+        "provider": "gemini", 
+        "plans": {"basic", "pro", "pro_max"},
+        "priority": 15,
+        "api_model": "gemini-1.5-pro",
+    },
     "groq-fast": {
-        "name": "Groq · GPT-OSS 20B",
+        "name": "Groq · Llama 3.1 70B",
         "provider": "groq",
-        "plans": {"pro", "pro_max"},
+        "plans": {"basic", "pro", "pro_max"},  # Made available to basic plan
         "priority": 20,
-        "api_model": "openai/gpt-oss-20b",
+        "api_model": "llama-3.1-70b-versatile",
+    },
+    "groq-mixtral": {
+        "name": "Groq · Mixtral 8x7B",
+        "provider": "groq",
+        "plans": {"basic", "pro", "pro_max"},  # Made available to basic plan
+        "priority": 25,
+        "api_model": "mixtral-8x7b-32768",
     },
 }
 
