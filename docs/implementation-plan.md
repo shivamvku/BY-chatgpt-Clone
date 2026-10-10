@@ -30,15 +30,15 @@ The repository currently has two GitHub Actions entrypoints: `Application` and `
 
 For each release, verify the exact main commit, required CI jobs, migration/application workflow result, and the deployed app independently. Verify real model access before claiming working production AI chat. Keep setup instructions in READMEs and update this status section whenever a material release changes the implementation or remaining work.
 
-## Delivery order
+## Ongoing engineering and release priorities
 
-1. Release reliability: pass immutable image outputs to migrations and application, validate workflow expressions, then verify a full GitHub release. Local validation alone does not establish deployment success.
-2. Design foundation: MUI theme tokens inspired by https://blueyonder.com/why-blue-yonder/ai-and-machine-learning/ai-agents, with blue primary actions, navy surfaces, clear typography and restrained accents. Use the YounderChat text wordmark and standard MUI icons. Preserve existing Azure resource names and the live subdomain.
-3. Appearance settings: implement a small foundation for light, dark and system mode, plus an independent standard/high contrast selection. These are explicit user requirements; high contrast is not listed in the PDF. Persist preferences locally before login and synchronize user settings after authentication exists. Initialize before first paint; test keyboard focus, contrast, reduced motion and mobile layouts. Defer extensive visual polish until working chat.
-4. Authentication and RBAC: deliver in small increments: schema and restricted runtime database access; secure session APIs and permission enforcement; then integrated account screens. Every publicly deployed auth increment must include applicable CSRF/origin checks, login throttling, session expiry/revocation and ownership protection. Use PostgreSQL users, hashed opaque sessions, Argon2id passwords and secure HttpOnly host-only cookies. Start with user/admin roles and a controlled admin provisioning script. Build admin management screens and email verification/reset separately after selecting an email provider; do not expose incomplete reset or verification flows.
-5. Provider verification and chat vertical slice: configure Gemini and Groq keys as GitHub secrets, review the Terraform plan that creates Key Vault references, and verify provider availability, quotas and pricing. Basic receives Gemini Flash; Pro and Pro Max receive both choices. Then verify persisted streaming generation states, cancellation and retry, and the responsive history/composer/message interface. Verify cross-user isolation and reload persistence before adding more controls.
-6. Rich content and settings: safe Markdown, tables, lists, images, message action menus, syntax highlighting, copy, history search/filter, export, and validated chart data. Support prompt edits/regeneration through conversation branches. Document whether images are display-only or model-understood.
-7. Production verification and submission: auth/chat browser tests, failure/cancellation tests, API contracts, full release smoke checks, cost/usage limits, architecture decisions, environment setup, screenshots or recording and the live demo URL.
+1. Release reliability: pass one immutable image digest to migrations and the application, validate workflow expressions, and run release smoke checks. CI success alone does not establish that the latest commit is deployed.
+2. UI and architecture: preserve the shared MUI theme, accessible standard components, YounderChat wordmark, and existing responsive behavior. Split large components along feature boundaries when that reduces coupling; prefer existing MUI primitives over custom controls and avoid broad UI redesigns during refactors.
+3. Authentication and RBAC: preserve CSRF/origin checks, login throttling, session expiry/revocation, ownership protection, hashed opaque sessions, Argon2id password verification, and secure HttpOnly host-only cookies. Keep admin provisioning controlled and verify the server-side authorization paths, not only whether controls are visible.
+4. Provider verification: use `backend/app/services/provider.py` as the model-catalogue source of truth. Verify model IDs, provider credentials, quotas, and pricing against live provider APIs before release; a passing fixture test or configured key does not prove production inference.
+5. Chat reliability and performance: retain persisted streaming states, cancellation/retry behavior, idempotent submissions, bounded context/history, and query-cache correctness. Debounce high-frequency search input, keep expensive rich-content/chart code lazy, and measure before adding caching or infrastructure.
+6. Rich content and settings: preserve safe Markdown rendering, bounded chart data, copy/export, history search, message branches, and all settings sections. Images remain display-only unless an explicit model-understanding flow is implemented and tested.
+7. Submission and operations: keep setup, architecture, configuration, limitations, screenshots, costs, and live-demo claims synchronized with the actual source and latest verified release. Separate CI evidence from live smoke-test evidence.
 
 ## Assignment coverage
 
@@ -56,13 +56,13 @@ Voice, web search, image generation, document retrieval and sandboxed code execu
 | --- | --- |
 | 1. Release | Workflow validation passes; committed fixes pass CI; staged release completes tests, image push, migrations, deployment and smoke checks using one immutable image digest. Verify the custom-domain frontend and database readiness after release. |
 | 2. Design | Shared MUI tokens and YounderChat wordmark are used by the app shell; inspect desktop and mobile layouts with standard MUI icons. |
-| 3. Appearance | Light/dark/system and standard/high contrast selections persist across reload; system mode follows OS changes; keyboard focus and contrast checks pass. Account synchronization is verified once auth is integrated. |
+| 3. Appearance | Light/dark/system and standard/high contrast selections persist across reload; system mode follows OS changes; keyboard focus and contrast checks pass. Account preferences are synchronized through the existing authenticated profile API; continue checking persistence, keyboard focus, contrast, reduced motion, and mobile layouts. |
 | 4. Auth/RBAC | Register/login/logout and profile work; expired/revoked sessions fail; cookie attributes, CSRF/origin rejection, throttling and role checks are tested. A second user cannot access another user's resources. Runtime DB credentials cannot perform schema administration. |
 | 5. Provider/chat | Record eligible provider, pricing and quotas; real responses stream and persist across reload. Stop, failure, timeout and retry states work without duplicate submissions; cross-user conversation access is rejected and usage limits enforced. |
 | 6. Rich content | Required images/tables/lists and action menus work at mobile widths with safe rendering. Implemented copy, search/filter, export, syntax and chart features have functional checks; edit/regeneration branches preserve history. |
 | 7. Submission | Browser/API tests and release smoke checks pass; README reproduces setup; architecture, configuration, limitations, screenshots/recording and live URL reflect implemented behavior. |
 
-Milestone 1 is complete with the CI and staged-release evidence linked above. Migrations and application deployment consume the same immutable image output. Future feature releases must continue to pass the smoke checks.
+The PR #19 checks and post-merge Application workflow passed, but the current production revision must be confirmed separately. For every release, verify that migrations and application deployment consume the same immutable image output and that the deployed custom domain passes smoke checks.
 
 ## Boundaries and acceptance
 
