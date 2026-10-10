@@ -9,7 +9,8 @@ afterEach(() => {
 describe('CSRF recovery', () => {
   it('refreshes a stale CSRF token and retries the rejected request once', async () => {
     setCsrf('stale-token');
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ detail: 'CSRF validation failed' }), {
           status: 403,
@@ -57,9 +58,9 @@ describe('CSRF recovery', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(request('/admin/users', { method: 'PATCH', body: '{}' })).rejects.toBeInstanceOf(
-      ApiError,
-    );
+    await expect(
+      request('/admin/users', { method: 'PATCH', body: '{}' }),
+    ).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
