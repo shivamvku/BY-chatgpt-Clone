@@ -275,7 +275,13 @@ export function DataSection() {
   );
 }
 
-export function SecuritySection({ signOut, busy }: { signOut: (all: boolean) => void; busy: boolean }) {
+export function SecuritySection({
+  signOut,
+  busy,
+}: {
+  signOut: (all: boolean) => void;
+  busy: boolean;
+}) {
   const sessions = useQuery({
     queryKey: ['sessions'],
     queryFn: () => api<SessionView[]>('/auth/sessions'),
