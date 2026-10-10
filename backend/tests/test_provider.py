@@ -67,10 +67,11 @@ def test_groq_protocol_and_plan_catalog(monkeypatch):
         ]
 
     assert asyncio.run(collect()) == ["hello"]
-    # Basic includes only Gemini; Groq is available to Pro and Pro Max.
+    # Basic includes all available models now: Gemini Flash, Gemini Pro, Groq Fast, Groq Mixtral
     ids = [row["id"] for row in provider.choices("basic")]
-    assert ids == ["gemini-flash"]
-    assert [row["id"] for row in provider.choices("pro")] == ["gemini-flash", "groq-fast"]
+    expected_basic = ["gemini-flash", "gemini-pro", "groq-fast", "groq-mixtral"]
+    assert ids == expected_basic
+    assert [row["id"] for row in provider.choices("pro")] == expected_basic
     get_settings.cache_clear()
 
 

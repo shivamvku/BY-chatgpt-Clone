@@ -25,6 +25,7 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("SERVE_FRONTEND", "false")
     monkeypatch.setenv("ALLOWED_ORIGINS", "http://testserver")
     monkeypatch.setenv("GEMINI_API_KEY", "test-provider-key")
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")  # Add Groq API key for testing
     get_settings.cache_clear()
     get_engine.cache_clear()
     Base.metadata.create_all(get_engine())
@@ -188,11 +189,14 @@ def test_model_catalog_and_basic_plan_enforcement(app):
     catalog = client.get("/api/models").json()
     assert catalog["configured"] is True
     model_ids = [m["id"] for m in catalog["models"]]
-    assert model_ids == ["gemini-flash"]
+    # Basic plan now includes all 4 models: Gemini Flash, Gemini Pro, Groq Fast, Groq Mixtral
+    expected_models = ["gemini-flash", "gemini-pro", "groq-fast", "groq-mixtral"]
+    assert model_ids == expected_models
     assert catalog["models"][0]["provider"] == "gemini"
     assert catalog["models"][0]["available"] is True
     identifier = conversation(client)
-    assert send(client, identifier, model="groq-fast").status_code == 403
+    # All models are now available to basic plan, so no 403 error expected
+    assert send(client, identifier, model="groq-fast").status_code == 200
 
 
 def test_private_image_validation_and_isolation(app):
