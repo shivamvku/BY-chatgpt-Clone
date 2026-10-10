@@ -124,7 +124,7 @@ Implemented in the current codebase:
 
 See [Implementation Plan](docs/implementation-plan.md) for current scope/status and [Backend README](backend/README.md) for backend and migration details.
 
-## Public interview demo
+## Public  demo
 
 The demo endpoint is https://aichat.sdigurukulam.in/. The hostname uses the developer's personal domain registered/managed through GoDaddy and was configured specifically for this interview demonstration; it is not a Blue Yonder-owned domain. Verify current deployment and real provider inference independently before describing them as live-tested.
 
