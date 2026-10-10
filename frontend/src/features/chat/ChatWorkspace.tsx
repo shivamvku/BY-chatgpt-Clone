@@ -5,6 +5,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // Components
 import { ChatMessages } from './components/ChatMessages';
+import { conversationParent } from './branches';
 import { ConversationDialog } from './components/ConversationDialog';
 import { History } from '../history/History';
 import { SettingsDialog } from '../settings/SettingsDialog';
@@ -161,7 +162,7 @@ export default function ChatWorkspace() {
 
         {/* Main Chat */}
         <Panel defaultSize={80}>
-          <Stack height="100dvh" bgcolor="background.default">
+          <Stack height="100dvh" minHeight={0} bgcolor="background.default">
             <ChatMessages
               chat={chat}
               models={models}
@@ -180,7 +181,9 @@ export default function ChatWorkspace() {
                 selectedModel={selectedModel}
                 onModelChange={setSelectedModel}
                 onStop={() => void chat.stop()}
-                onSend={(content) => chat.send(content, null)}
+                onSend={(content) =>
+                  chat.send(content, conversationParent(chat.messages.data ?? [], chat.leaf))
+                }
               />
             </Container>
           </Stack>
