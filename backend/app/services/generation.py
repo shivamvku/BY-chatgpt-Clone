@@ -143,9 +143,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
         )
         await asyncio.to_thread(persist, message_id, content, "failed")
         finished = True
-        yield event(
-            "error", {"message": "AI response failed. Retry when the provider is available."}
-        )
+        yield event("error", {"message": _failure_message(exc)})
     finally:
         # ASGI disconnect cancels the request scope; final state must still reach PostgreSQL.
         with anyio.CancelScope(shield=True):
