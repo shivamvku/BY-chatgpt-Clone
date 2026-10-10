@@ -8,6 +8,12 @@
 *.pfx
 *.p12
 
+# Private interview preparation — keep answer banks and personal notes out of Git
+/interview-prep.local/
+/INTERVIEW_QA.local.md
+/docs/*interview*.local.md
+/docs/interview-walkthrough.md
+
 # Python environments, caches, and package output
 .venv/
 venv/
