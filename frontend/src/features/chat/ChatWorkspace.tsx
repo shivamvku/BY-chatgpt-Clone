@@ -164,7 +164,7 @@ export default function ChatWorkspace() {
                 busy={chat.busy}
                 canStop={chat.generating}
                 enabled={!!models.data?.configured}
-                models={models}
+                models={models.data}
                 selectedModel={selectedModel}
                 onModelChange={setSelectedModel}
                 onStop={() => void chat.stop()}

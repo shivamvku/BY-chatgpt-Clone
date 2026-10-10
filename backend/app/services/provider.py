@@ -21,6 +21,7 @@ MODELS: dict[str, dict] = {
         "plans": {"basic", "pro", "pro_max"},
         "priority": 10,
         "api_model": "gemini-2.5-flash",
+        "supports_images": True,
     },
     "gemini-pro": {
         "name": "Gemini 1.5 Pro",
@@ -28,20 +29,23 @@ MODELS: dict[str, dict] = {
         "plans": {"basic", "pro", "pro_max"},
         "priority": 15,
         "api_model": "gemini-1.5-pro",
+        "supports_images": True,
     },
     "groq-fast": {
         "name": "Groq · Llama 3.1 70B",
         "provider": "groq",
-        "plans": {"basic", "pro", "pro_max"},  # Made available to basic plan
+        "plans": {"basic", "pro", "pro_max"},
         "priority": 20,
         "api_model": "llama-3.1-70b-versatile",
+        "supports_images": False,
     },
     "groq-mixtral": {
         "name": "Groq · Mixtral 8x7B",
         "provider": "groq",
-        "plans": {"basic", "pro", "pro_max"},  # Made available to basic plan
+        "plans": {"basic", "pro", "pro_max"},
         "priority": 25,
         "api_model": "mixtral-8x7b-32768",
+        "supports_images": False,
     },
 }
 
@@ -91,6 +95,7 @@ def choices(plan_id: str) -> list[dict[str, object]]:
                 "name": definition["name"],
                 "provider": definition["provider"],
                 "available": available,
+                "supports_images": definition["supports_images"],
             }
         )
     return result
@@ -124,7 +129,9 @@ async def _groq(messages: list[dict], groq_model: str) -> AsyncIterator[str]:
             headers={"Authorization": f"Bearer {settings.groq_api_key}"},
             json={
                 "model": groq_model,
-                "messages": messages,
+                "messages": [
+                    {"role": item["role"], "content": item["content"]} for item in messages
+                ],
                 "stream": True,
                 "max_completion_tokens": settings.max_output_tokens,
             },

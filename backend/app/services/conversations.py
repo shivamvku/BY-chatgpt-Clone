@@ -67,7 +67,7 @@ def context_messages(db: Session, conversation_id: str, leaf: str) -> list[dict]
             continue
         if size + len(message.content) > settings.max_context_chars:
             break
-        attachment_ids = ATTACHMENT_URL.findall(message.content)
+        attachment_ids = ATTACHMENT_URL.findall(message.content) if message.role == "user" else []
         images = []
         if attachment_ids:
             rows = db.scalars(
@@ -115,6 +115,8 @@ def prepare_generation(
         raise HTTPException(403, "This model is not included with your plan")
     if not allowed[model_id]["available"]:
         raise HTTPException(503, "This model is not configured. Contact an administrator.")
+    if content and ATTACHMENT_URL.search(content) and not allowed[model_id]["supports_images"]:
+        raise HTTPException(422, "Select a Gemini model to analyse an image")
     request_limit, token_limit = limits(plan)
     conversation = owned(db, user_id, conversation_id, lock=True)
     ordinal = (

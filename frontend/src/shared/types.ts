@@ -45,6 +45,7 @@ export interface ModelChoice {
   name: string;
   provider: ModelProvider;
   available: boolean;
+  supports_images: boolean;
 }
 export interface ModelInfo {
   configured: boolean;

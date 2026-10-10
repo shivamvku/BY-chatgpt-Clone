@@ -179,6 +179,7 @@ class ModelChoice(BaseModel):
     name: str
     provider: Literal["gemini", "groq"]
     available: bool
+    supports_images: bool
 
 
 class Capabilities(BaseModel):
