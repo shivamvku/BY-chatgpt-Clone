@@ -255,7 +255,6 @@ def prepare_generation(
     return answer
 
 
-
 def release_reservation(db: Session, message_id: str, terminal_status: str) -> None:
     """Release quota for a failed/stopped generation exactly once.
 
@@ -297,7 +296,6 @@ def release_reservation(db: Session, message_id: str, terminal_status: str) -> N
         )
     )
     usage_event.status = terminal_status
-
 
 
 def reconcile_stale_generations(db: Session, batch_size: int = 100) -> int:
