@@ -4,11 +4,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.session import get_engine
 from app.models.entities import Message, Usage, UsageEvent, now
 from app.services import provider
 from app.services.conversations import reconcile_stale_generations
-from app.core.config import get_settings
 from tests.test_application import app as application_fixture
 from tests.test_application import conversation, register, send
 
