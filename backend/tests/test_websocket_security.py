@@ -12,11 +12,11 @@ def test_websocket_rejects_unconfigured_origin(app):
     client = TestClient(app)
     register(client)
 
-    with client.websocket_connect(
-        "/api/ws/session", headers={"Origin": "https://evil.invalid"}
-    ) as websocket:
-        with pytest.raises(WebSocketDisconnect) as closed:
-            websocket.receive_text()
+    with pytest.raises(WebSocketDisconnect) as closed:
+        with client.websocket_connect(
+            "/api/ws/session", headers={"Origin": "https://evil.invalid"}
+        ):
+            pass
 
     assert closed.value.code == 4403
 
