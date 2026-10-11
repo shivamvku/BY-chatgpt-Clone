@@ -71,7 +71,9 @@ describe('SSE streaming parser', () => {
         controller.close();
       },
     });
-    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response(body, { status: 200 })));
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(body, { status: 200 })),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     const events: Array<{ kind: string; data: Record<string, string> }> = [];
