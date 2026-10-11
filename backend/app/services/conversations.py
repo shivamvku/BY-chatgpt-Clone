@@ -2,7 +2,7 @@ import re
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -234,6 +234,7 @@ def prepare_generation(
             >= int(
                 datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
             ),
+            UsageEvent.status.not_in(("failed", "stopped")),
         )
     )
     if shared_reserved + reserve > token_limit:
@@ -250,3 +251,47 @@ def prepare_generation(
     conversation.updated_at = now()
     db.commit()
     return answer
+
+
+
+def release_reservation(db: Session, message_id: str, terminal_status: str) -> None:
+    """Release quota for a failed/stopped generation exactly once.
+
+    Successful generations retain their conservative reservation because provider
+    token usage is not consistently available across adapters. UsageEvent keeps
+    the original reservation for audit; its terminal status excludes released work
+    from subscription quota totals.
+    """
+    if terminal_status not in {"failed", "stopped"}:
+        raise ValueError("Only failed or stopped generations release reservations")
+
+    usage_event = db.scalar(
+        select(UsageEvent).where(UsageEvent.id == message_id).with_for_update()
+    )
+    if not usage_event or usage_event.status in {"complete", "failed", "stopped"}:
+        return
+
+    reserved = max(0, usage_event.reserved_tokens)
+    day = datetime.fromtimestamp(usage_event.created_at, UTC).date().isoformat()
+    db.execute(
+        update(Usage)
+        .where(Usage.user_id == usage_event.user_id, Usage.day == day)
+        .values(
+            reserved_tokens=case(
+                (Usage.reserved_tokens >= reserved, Usage.reserved_tokens - reserved),
+                else_=0,
+            )
+        )
+    )
+    global_key = digest(f"global-tokens:{day}")
+    db.execute(
+        update(RateBucket)
+        .where(RateBucket.key == global_key)
+        .values(
+            count=case(
+                (RateBucket.count >= reserved, RateBucket.count - reserved),
+                else_=0,
+            )
+        )
+    )
+    usage_event.status = terminal_status
