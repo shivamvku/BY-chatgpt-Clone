@@ -45,7 +45,8 @@ resource "azurerm_container_app_job" "retention" {
   resource_group_name          = local.platform.resource_group_name
   container_app_environment_id = local.platform.environment_id
   replica_timeout_in_seconds   = 300
-  replica_retry_limit          = 0
+  # Purge and stale-generation reconciliation are idempotent, so retry transient failures.
+  replica_retry_limit          = 2
   workload_profile_name        = "Consumption"
   tags                         = local.platform.tags
   schedule_trigger_config {
