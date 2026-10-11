@@ -80,30 +80,37 @@ export async function streamResponse(
   const decoder = new TextDecoder();
   let buffer = '',
     completed = false;
+  const dispatch = (block: string) => {
+    const kind = block
+      .split('\n')
+      .find((line) => line.startsWith('event: '))
+      ?.slice(7);
+    const payload = block
+      .split('\n')
+      .filter((line) => line.startsWith('data: '))
+      .map((line) => line.slice(6))
+      .join('\n');
+    if (kind && payload) {
+      onEvent(kind, JSON.parse(payload));
+      if (kind === 'done' || kind === 'error') completed = true;
+    }
+  };
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
+      // Normalize after joining chunks so CRLF split across network chunks works.
+      buffer = buffer.replace(/\r\n/g, '\n');
       let boundary: number;
       while ((boundary = buffer.indexOf('\n\n')) >= 0) {
-        const block = buffer.slice(0, boundary);
+        dispatch(buffer.slice(0, boundary));
         buffer = buffer.slice(boundary + 2);
-        const kind = block
-          .split('\n')
-          .find((line) => line.startsWith('event: '))
-          ?.slice(7);
-        const payload = block
-          .split('\n')
-          .filter((line) => line.startsWith('data: '))
-          .map((line) => line.slice(6))
-          .join('\n');
-        if (kind && payload) {
-          onEvent(kind, JSON.parse(payload));
-          if (kind === 'done' || kind === 'error') completed = true;
-        }
       }
     }
+    buffer += decoder.decode();
+    buffer = buffer.replace(/\r\n/g, '\n');
+    if (buffer.trim()) dispatch(buffer);
     if (!completed) throw new Error('Connection interrupted. Reload to see the saved response.');
   } finally {
     reader.releaseLock();
