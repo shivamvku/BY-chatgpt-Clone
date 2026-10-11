@@ -5,8 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_engine
-from app.models.entities import Usage, UsageEvent
+from app.models.entities import Message, Usage, UsageEvent, now
 from app.services import provider
+from app.services.conversations import reconcile_stale_generations
+from app.core.config import get_settings
 from tests.test_application import app as application_fixture
 from tests.test_application import conversation, register, send
 
@@ -62,3 +64,24 @@ def test_failed_provider_generation_releases_reservation(app, monkeypatch):
     event = _event_for_message(message_id)
     assert event.status == "failed"
     assert event.reserved_tokens > 0  # Preserve the attempted reservation for audit.
+
+
+
+def test_stale_generation_reconciliation_releases_reservation(app):
+    client = TestClient(app)
+    user = register(client)
+    conversation_id = conversation(client)
+    response = send(client, conversation_id)
+    assert response.status_code == 200
+    message_id = response.json()["id"]
+    assert _usage_for_user(user["id"]).reserved_tokens > 0
+
+    with Session(get_engine()) as db:
+        row = db.get(Message, message_id)
+        row.updated_at = now() - get_settings().generation_timeout - 61
+        db.commit()
+        assert reconcile_stale_generations(db, batch_size=10) == 1
+        assert db.get(Message, message_id).status == "failed"
+
+    assert _usage_for_user(user["id"]).reserved_tokens == 0
+    assert _event_for_message(message_id).status == "failed"
