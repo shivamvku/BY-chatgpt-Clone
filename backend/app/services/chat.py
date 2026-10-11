@@ -146,6 +146,7 @@ def messages(*, conversation_id: str, current: Identity, db: Session):
             and row.updated_at < now() - get_settings().generation_timeout - 60
         ):
             row.status = "failed"
+            release_reservation(db, row.id, "failed")
     db.commit()
     return rows
 
