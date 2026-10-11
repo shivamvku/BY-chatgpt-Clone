@@ -3,6 +3,7 @@ provider "azurerm" {
   subscription_id                 = var.subscription_id
   resource_provider_registrations = "none"
 }
+
 data "terraform_remote_state" "foundation" {
   backend = "azurerm"
   config = {
@@ -13,11 +14,13 @@ data "terraform_remote_state" "foundation" {
     use_azuread_auth     = true
   }
 }
+
 locals {
   platform     = data.terraform_remote_state.foundation.outputs.application
   app_config   = jsondecode(file("${path.module}/../../../../config/app.json"))
   email_config = jsondecode(file("${path.module}/../../../../config/email.json"))
 }
+
 module "app" {
   source              = "../../../modules/container-app"
   name                = local.platform.name
@@ -37,6 +40,7 @@ module "app" {
     email_from      = local.email_config.enabled ? local.email_config.from : ""
   })
 }
+
 output "url" {
   value = module.app.url
 }
@@ -51,8 +55,8 @@ resource "azurerm_container_app_job" "retention" {
   workload_profile_name        = "Consumption"
   tags                         = local.platform.tags
   schedule_trigger_config {
-    cron_expression          = "0 2 * * *"
-    parallelism              = 1
+    cron_expression         = "0 2 * * *"
+    parallelism             = 1
     replica_completion_count = 1
   }
   identity {
