@@ -185,7 +185,8 @@ def prepare_generation(
     # UTF-8 bytes bound text tokenization conservatively; reserve output and overhead upfront.
     reserve = sum(len(row["content"].encode("utf-8")) + 32 for row in context)
     reserve += settings.max_output_tokens + 256
-    day = datetime.now(UTC).date().isoformat()
+    reservation_time = datetime.now(UTC)
+    day = reservation_time.date().isoformat()
     insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     global_key = digest(f"global-tokens:{day}")
     statement = insert(RateBucket).values(key=global_key, count=reserve, expires_at=now() + 86400)
@@ -232,7 +233,7 @@ def prepare_generation(
             UsageEvent.subscription_id == subscription.id,
             UsageEvent.created_at
             >= int(
-                datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+                reservation_time.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
             ),
             UsageEvent.status.not_in(("failed", "stopped")),
         )
@@ -246,6 +247,7 @@ def prepare_generation(
             subscription_id=subscription.id,
             model=model_id,
             reserved_tokens=reserve,
+            created_at=int(reservation_time.timestamp()),
         )
     )
     conversation.updated_at = now()
