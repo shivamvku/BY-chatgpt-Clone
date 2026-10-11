@@ -57,13 +57,12 @@ describe('CSRF recovery', () => {
   });
 });
 
-
 describe('SSE streaming parser', () => {
   it('handles CRLF split across chunks and a final frame without a blank terminator', async () => {
     const chunks = [
-      'event: delta\\r',
-      '\\ndata: {"text":"hello"}\\r\\n\\r',
-      '\\nevent: done\\r\\ndata: {"status":"complete"}',
+      'event: delta\r',
+      '\ndata: {"text":"hello"}\r\n\r',
+      '\nevent: done\r\ndata: {"status":"complete"}',
     ];
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -72,9 +71,7 @@ describe('SSE streaming parser', () => {
         controller.close();
       },
     });
-    const fetchMock = vi.fn<typeof fetch>(() =>
-      Promise.resolve(new Response(body, { status: 200 })),
-    );
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response(body, { status: 200 })));
     vi.stubGlobal('fetch', fetchMock);
 
     const events: Array<{ kind: string; data: Record<string, string> }> = [];
