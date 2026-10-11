@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     max_output_tokens: int = Field(1024, ge=64, le=4096)
     max_context_chars: int = Field(24000, ge=1000, le=48000)
     generation_timeout: int = Field(120, ge=10, le=300)
+    # Per-process PostgreSQL connection budget; defaults preserve existing behavior.
+    db_pool_size: int = Field(5, ge=1, le=20)
+    db_max_overflow: int = Field(5, ge=0, le=20)
+    db_pool_timeout: int = Field(5, ge=1, le=60)
     skip_email_verification: bool = False
 
     @property
