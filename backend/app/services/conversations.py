@@ -297,3 +297,28 @@ def release_reservation(db: Session, message_id: str, terminal_status: str) -> N
         )
     )
     usage_event.status = terminal_status
+
+
+
+def reconcile_stale_generations(db: Session, batch_size: int = 100) -> int:
+    """Fail stale in-flight responses and release their reservations in bounded batches."""
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+    threshold = now() - get_settings().generation_timeout - 60
+    rows = db.scalars(
+        select(Message)
+        .where(
+            Message.status.in_(("pending", "streaming", "stopping")),
+            Message.updated_at < threshold,
+        )
+        .order_by(Message.updated_at, Message.id)
+        .limit(batch_size)
+        .with_for_update()
+    ).all()
+    for row in rows:
+        row.status = "failed"
+        row.updated_at = now()
+        release_reservation(db, row.id, "failed")
+    if rows:
+        db.commit()
+    return len(rows)
