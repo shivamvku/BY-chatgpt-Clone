@@ -37,7 +37,9 @@ module "app" {
     email_from      = local.email_config.enabled ? local.email_config.from : ""
   })
 }
-output "url" { value = module.app.url }
+output "url" {
+  value = module.app.url
+}
 
 resource "azurerm_container_app_job" "retention" {
   name                         = "${local.platform.name}-retention"
