@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.db.session import get_engine
 from app.models.entities import Conversation, Message, UsageEvent, now
 from app.services import provider
-from app.services.conversations import context_messages, owned
+from app.services.conversations import context_messages, owned, release_reservation
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,10 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         row.status = "stopped" if stopping else status
         usage = db.get(UsageEvent, message_id)
         if usage:
-            usage.status = row.status
+            if row.status in {"failed", "stopped"}:
+                release_reservation(db, message_id, row.status)
+            else:
+                usage.status = row.status
         conversation = db.get(Conversation, row.conversation_id)
         if conversation:
             conversation.updated_at = now()
