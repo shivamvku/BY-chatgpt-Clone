@@ -157,6 +157,7 @@ def prepare_generation(
     for row in running:
         if row.updated_at < now() - settings.generation_timeout - 60:
             row.status = "failed"
+            release_reservation(db, row.id, "failed")
         else:
             raise HTTPException(409, "Stop the current response before sending another")
     ancestors = branch(db, conversation_id, parent_id)
