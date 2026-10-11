@@ -5,6 +5,8 @@ from starlette.websockets import WebSocketDisconnect
 from tests.test_application import app as application_fixture
 from tests.test_application import register
 
+app = application_fixture
+
 
 def test_websocket_rejects_unconfigured_origin(app):
     client = TestClient(app)
