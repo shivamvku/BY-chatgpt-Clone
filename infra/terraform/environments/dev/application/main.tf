@@ -31,7 +31,7 @@ module "app" {
   groq_secret_id      = try(local.platform.groq_secret_id, "")
   tags                = local.platform.tags
   image               = var.image
-  app_config = merge(local.app_config, {
+  app_config          = merge(local.app_config, {
     allowed_origins = "${local.app_config.allowed_origins},https://${local.platform.name}.${local.platform.environment_domain}"
     public_url      = local.email_config.public_url
     email_from      = local.email_config.enabled ? local.email_config.from : ""
@@ -53,7 +53,7 @@ resource "azurerm_container_app_job" "retention" {
   schedule_trigger_config {
     cron_expression          = "0 2 * * *"
     parallelism              = 1
-    replica_completion_count  = 1
+    replica_completion_count = 1
   }
   identity {
     type         = "UserAssigned"
