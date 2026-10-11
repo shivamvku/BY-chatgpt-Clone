@@ -6,12 +6,6 @@ from tests.test_application import app as application_fixture
 from tests.test_application import register
 
 
-@pytest.fixture
-def client(app=application_fixture):
-    # The imported fixture is used by pytest to create an isolated database/app.
-    return TestClient(app)
-
-
 def test_websocket_rejects_unconfigured_origin(app):
     client = TestClient(app)
     register(client)
