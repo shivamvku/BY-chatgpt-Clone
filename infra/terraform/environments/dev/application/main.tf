@@ -55,8 +55,8 @@ resource "azurerm_container_app_job" "retention" {
   workload_profile_name        = "Consumption"
   tags                         = local.platform.tags
   schedule_trigger_config {
-    cron_expression         = "0 2 * * *"
-    parallelism             = 1
+    cron_expression          = "0 2 * * *"
+    parallelism              = 1
     replica_completion_count = 1
   }
   identity {
