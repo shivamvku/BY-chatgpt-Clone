@@ -24,12 +24,13 @@ def get_engine() -> Engine:
             connect_args={"check_same_thread": False},
             poolclass=NullPool,
         )
+    settings = get_settings()
     return create_engine(
         url,
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=5,
-        pool_timeout=5,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=settings.db_pool_timeout,
         connect_args={"connect_timeout": 5},
     )
 
