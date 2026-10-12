@@ -75,7 +75,12 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         row = db.scalar(select(Message).where(Message.id == message_id).with_for_update())
         if not row:
             return False
-        stopping = row.status in {"stopping", "stopped"}
+        # Terminal states are immutable: a delayed provider worker must never
+        # resurrect a reconciled/failed/stopped generation or rewrite its audit event.
+        if row.status in {"complete", "failed", "stopped"}:
+            return row.status == "complete"
+
+        stopping = row.status == "stopping"
         row.content = content
         row.updated_at = now()
         row.status = "stopped" if stopping else status
@@ -89,7 +94,7 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         if conversation:
             conversation.updated_at = now()
         db.commit()
-        return not stopping
+        return not stopping and row.status not in {"failed", "stopped"}
 
 
 def event(kind: str, value: dict) -> str:
