@@ -406,4 +406,4 @@ def test_readiness_checks_migrated_database_schema(app):
     response = client.get("/api/health/ready")
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
-\n
+
