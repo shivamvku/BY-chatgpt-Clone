@@ -12,7 +12,8 @@ from app.core.config import get_settings
 from app.db.session import get_engine
 from app.models.entities import Message, RateBucket, Usage, UsageEvent
 from app.services.conversations import prepare_generation, reconcile_stale_generations
-from app.services.generation import persist\nfrom app.services.security import digest
+from app.services.generation import persist
+from app.services.security import digest
 from tests.test_application import conversation, register, send
 
 
