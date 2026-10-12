@@ -40,6 +40,19 @@ flowchart LR
 
 For the expanded system diagram, request flow and deployment explanation, see [System Architecture](docs/architecture.md).
 
+## Engineering documentation and interview preparation
+
+Start with [the documentation index](docs/README.md) for the end-to-end user workflow, architecture, implementation boundaries and organized technical diagrams.
+
+For interview practice, see [docs/prep/README.md](docs/prep/README.md), with separate Q&A files for architecture, system design, APIs, UI, CI/CD, authentication/security, LLM integration, chat/generation and users/administration.
+
+Key references:
+- [End-to-end user workflow](docs/user-workflow.md)
+- [System architecture](docs/architecture.md)
+- [Technical diagram catalogue](docs/diagrams/README.md)
+- [Implementation scope and acceptance guide](docs/implementation-plan.md)
+- [Implementation status and feature boundaries](docs/implementation-status.md)
+
 ## Run locally (recommended for interview)
 
 ### Linux / macOS
