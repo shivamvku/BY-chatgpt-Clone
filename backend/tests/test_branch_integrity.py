@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -15,14 +16,15 @@ app = application_fixture
 
 
 def test_branch_rejects_missing_and_cross_conversation_parents(app):
-    client = __import__("fastapi.testclient", fromlist=["TestClient"]).TestClient(app)
+    client = TestClient(app)
     register(client)
     conversation_id = conversation(client)
     other_conversation_id = conversation(client)
 
     with Session(get_engine()) as db:
-        with pytest.raises(HTTPException, match="Invalid message parent"):
+        with pytest.raises(HTTPException) as missing:
             branch(db, conversation_id, str(uuid4()))
+        assert missing.value.detail == "Invalid message parent"
 
         foreign = Message(
             conversation_id=other_conversation_id,
@@ -36,13 +38,12 @@ def test_branch_rejects_missing_and_cross_conversation_parents(app):
         db.commit()
         foreign_id = foreign.id
 
-        with pytest.raises(HTTPException, match="Invalid message parent"):
+        with pytest.raises(HTTPException) as cross_conversation:
             branch(db, conversation_id, foreign_id)
+        assert cross_conversation.value.detail == "Invalid message parent"
 
 
 def test_branch_rejects_parent_cycles(app):
-    from fastapi.testclient import TestClient
-
     client = TestClient(app)
     register(client)
     conversation_id = conversation(client)
@@ -72,8 +73,9 @@ def test_branch_rejects_parent_cycles(app):
             ]
         )
         db.commit()
-        with pytest.raises(HTTPException, match="Conversation branch is too long"):
+        with pytest.raises(HTTPException) as cycle:
             branch(db, conversation_id, first_id)
+        assert cycle.value.detail == "Conversation branch is too long"
 
 
 def test_message_ordinal_conflicts_are_rejected_by_database(app):
