@@ -23,9 +23,12 @@ on:
 permissions:
   contents: read
 
+# Production operations share Azure Terraform state. Serialize push and manual
+# runs together and never cancel an in-progress deployment, which can leave an
+# Azure Blob lease behind. PR checks remain independently cancellable.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && 'production-deployment' || format('application-{0}', github.ref) }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  group: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch') && 'production-deployment' || format('application-{0}', github.ref) }}
+  cancel-in-progress: ${{ !((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch') }}
 
 env:
   ARM_USE_OIDC: "true"
