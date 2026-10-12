@@ -19,7 +19,12 @@ def ready() -> dict[str, str]:
         raise HTTPException(status_code=503, detail="Database is not configured")
     try:
         with get_engine().connect() as connection:
-            # Verify the runtime principal can reach the database and the migrated\n            # application schema, not merely open a TCP connection. These reads\n            # are side-effect free and intentionally use the runtime DB credentials.\n            connection.execute(text("SELECT 1"))\n            connection.execute(text("SELECT 1 FROM users LIMIT 0"))\n            connection.execute(text("SELECT 1 FROM conversations LIMIT 0"))
+            # Verify the runtime principal can reach the database and the migrated
+            # application schema, not merely open a TCP connection. These reads
+            # are side-effect free and intentionally use the runtime DB credentials.
+            connection.execute(text("SELECT 1"))
+            connection.execute(text("SELECT 1 FROM users LIMIT 0"))
+            connection.execute(text("SELECT 1 FROM conversations LIMIT 0"))
     except SQLAlchemyError:
         raise HTTPException(status_code=503, detail="Database is unavailable") from None
     return {"status": "ready"}
