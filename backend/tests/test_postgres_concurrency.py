@@ -13,16 +13,18 @@ from app.db.session import get_engine
 from app.models.entities import Message, RateBucket, UsageEvent
 from app.services.conversations import prepare_generation
 from app.services.security import digest
-from tests.test_application import app as app_fixture, conversation, register
+from tests.test_application import conversation, register
 
 
-def test_global_token_reservation_is_atomic_and_rejected_request_rolls_back(app_fixture, monkeypatch):
+def test_global_token_reservation_is_atomic_and_rejected_request_rolls_back(
+    app, monkeypatch
+):
     if get_engine().dialect.name != "postgresql":
         pytest.skip("Concurrency guarantees must be exercised against PostgreSQL, not SQLite")
 
     clients_and_contexts = []
     for email in ("quota-first@example.com", "quota-second@example.com"):
-        client = TestClient(app_fixture)
+        client = TestClient(app)
         user = register(client, email)
         clients_and_contexts.append((user["id"], conversation(client)))
 
