@@ -6,52 +6,81 @@ A ChatGPT-style full-stack application built with React, TypeScript, Material UI
 
 ## System architecture
 
-~~~mermaid
+YounderChat uses a modern, cloud-native architecture deployed on Microsoft Azure with comprehensive security, scalability, and monitoring capabilities.
+
+```mermaid
 flowchart LR
   UI["Browser UI<br/>React + TypeScript + MUI"]
   API["FastAPI<br/>REST + auth + authorization"]
   GEN["Generation service<br/>normalized streaming + stop"]
-  DB[("Data store<br/>Local: SQLite<br/>Deployed: private PostgreSQL")]
+  DB[("Azure PostgreSQL<br/>Private network + SSL")]
   P["Provider abstraction<br/>model policy + adapters"]
   G["Gemini API"]
   R["Groq API"]
-  UI -->|"HTTP / session cookie / CSRF"| API
+  
+  UI -->|"HTTPS / session cookie / CSRF"| API
   API <--> DB
   API --> GEN
-  GEN <--> DB
   GEN --> P
   P -->|"server-side key"| G
   P -->|"server-side key"| R
-  subgraph Azure["Production delivery"]
-    GH["GitHub Actions + OIDC"]
-    TF["Terraform"]
-    ACR["Azure Container Registry"]
-    ACA["Azure Container Apps"]
-    PG["Azure Database for PostgreSQL<br/>private networking"]
-    KV["Key Vault + managed identity"]
-    GH --> ACR --> ACA
-    GH --> TF --> ACA
-    TF --> PG
-    KV -. "secret references" .-> ACA
+  
+  subgraph Azure["Azure Infrastructure"]
+    ACR["Container Registry<br/>Private image repository"]
+    CAE["Container App Environment<br/>VNet-integrated"]
+    CA["Container Apps<br/>Auto-scaling 0-2 replicas"]
+    KV["Key Vault<br/>Managed identity access"]
+    VNet["Virtual Network<br/>10.42.0.0/16 with subnets"]
+    LA["Log Analytics<br/>Centralized monitoring"]
   end
-  ACA --> API
-  API <--> PG
-~~~
+  
+  subgraph CI_CD["CI/CD Pipeline"]
+    GHA["GitHub Actions<br/>OIDC federation"]
+    TF["Terraform<br/>Infrastructure as Code"]
+  end
+  
+  CAE --> CA
+  CA --> API
+  CA -.->|"Managed Identity"| KV
+  CA -.->|"Private network"| DB
+  ACR -.->|"Image deployment"| CA
+  CA --> LA
+  
+  GHA --> ACR
+  GHA --> TF
+  TF --> CAE
+  TF --> VNet
+  TF --> KV
+```
 
-For the expanded system diagram, request flow and deployment explanation, see [System Architecture](docs/architecture.md).
+**Azure Architecture Details:**
+- **[Complete Infrastructure Overview](docs/diagrams/azure-infrastructure.md)** - All Azure services with configurations
+- **[Network Design](docs/diagrams/network-topology.md)** - VNet topology, subnets, and security
+- **[Security Architecture](docs/diagrams/security-architecture.md)** - Identity management and access controls
+- **[CI/CD Pipeline](docs/diagrams/cicd-pipeline.md)** - Automated deployment with GitHub Actions
+
+For the complete system architecture with Azure service details, see [System Architecture](docs/architecture.md) and [Azure Architecture Diagrams](docs/diagrams/README.md).
 
 ## Engineering documentation and interview preparation
 
 Start with [the documentation index](docs/README.md) for the end-to-end user workflow, architecture, implementation boundaries and organized technical diagrams.
 
-For interview practice, see [docs/prep/README.md](docs/prep/README.md), with separate Q&A files for architecture, system design, APIs, UI, CI/CD, authentication/security, LLM integration, chat/generation and users/administration.
+**Azure Architecture Documentation:**
+- **[Azure Infrastructure Overview](docs/diagrams/azure-infrastructure.md)** - Complete service catalog with configurations and cost analysis
+- **[Network Architecture](docs/diagrams/network-topology.md)** - Virtual network design, subnets, and security controls
+- **[Security Architecture](docs/diagrams/security-architecture.md)** - Identity management, RBAC, and secrets management
+- **[Data Model](docs/diagrams/data-model.md)** - PostgreSQL schema and entity relationships
+- **[CI/CD Pipeline](docs/diagrams/cicd-pipeline.md)** - GitHub Actions workflows and Azure deployment
+- **[User Workflow](docs/diagrams/user-workflow.md)** - End-to-end user journey through Azure services
 
-Key references:
-- [End-to-end user workflow](docs/user-workflow.md)
-- [System architecture](docs/architecture.md)
-- [Technical diagram catalogue](docs/diagrams/README.md)
-- [Implementation scope and acceptance guide](docs/implementation-plan.md)
-- [Implementation status and feature boundaries](docs/implementation-status.md)
+**Key Implementation References:**
+- **[System Architecture](docs/architecture.md)** - High-level architecture with Azure integration
+- **[Implementation Scope](docs/implementation-plan.md)** - Authoritative scope and acceptance criteria  
+- **[Implementation Status](docs/implementation-status.md)** - Current feature boundaries and completion
+- **[End-to-end User Workflow](docs/user-workflow.md)** - Business process documentation
+
+**Interview Preparation:**
+For interview practice, see [docs/prep/README.md](docs/prep/README.md), with separate Q&A files for architecture, system design, APIs, UI, CI/CD, authentication/security, LLM integration, chat/generation and users/administration.
 
 ## Run locally (recommended for interview)
 
