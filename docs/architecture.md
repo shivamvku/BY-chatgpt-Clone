@@ -37,14 +37,6 @@ flowchart TB
     API <--> PG
     DNS["GoDaddy DNS<br/>aichat.sdigurukulam.in"]
     DNS -. "demo hostname points to app endpoint" .-> ACA
-    classDef client fill:#e8f1ff,stroke:#356ac3,color:#172b4d
-    classDef service fill:#e9f7ef,stroke:#25855a,color:#153e2b
-    classDef data fill:#fff4df,stroke:#b7791f,color:#563b10
-    classDef external fill:#f3e8ff,stroke:#8250df,color:#38215c
-    class Browser client
-    class API,Gen,Provider service
-    class DB,PG,KV data
-    class Gemini,Groq,Actions,OIDC,Terraform,ACR,ACA,DNS external
 ~~~
 
 ## Request path
@@ -62,3 +54,13 @@ GitHub Actions validates pull requests. The production workflow uses OIDC and sc
 ## DNS note
 
 The demo hostname https://aichat.sdigurukulam.in/ uses the developer's personal domain registered/managed through GoDaddy and was set up specifically for this interview demonstration. It is a demonstration endpoint, not a Blue Yonder-owned domain.
+
+## Related technical documentation
+
+- [End-to-end user workflow](user-workflow.md)
+- [Technical diagram catalogue](diagrams/README.md)
+- [Authentication and security diagram](diagrams/auth-security.md)
+- [Chat streaming diagram](diagrams/chat-streaming.md)
+- [CI/CD deployment diagram](diagrams/cicd-deployment.md)
+- [Interview preparation Q&A](prep/README.md)
+- [Implementation scope and acceptance guide](implementation-plan.md)
