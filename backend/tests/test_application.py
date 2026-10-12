@@ -400,3 +400,10 @@ def test_production_cookie_attributes(app, monkeypatch):
     assert all(value in cookie for value in ["HttpOnly", "Secure", "SameSite=lax", "Path=/"])
     assert "Domain=" not in cookie
     assert client.get("/api/docs").status_code == 404
+
+def test_readiness_checks_migrated_database_schema(app):
+    client = TestClient(app)
+    response = client.get("/api/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+\n
