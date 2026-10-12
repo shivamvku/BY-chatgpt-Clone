@@ -111,6 +111,8 @@ def still_running(message_id: str) -> bool:
 async def events(message_id: str, context: tuple[list[dict[str, str]], str], request):
     messages, model_id = context
     content, finished = "", False
+    started_at = time.monotonic()
+    outcome = "stopped"
     last_save = 0.0
     last_check = 0.0
     upstream = provider.stream_completion(messages, model_id)
@@ -128,6 +130,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                     if not await asyncio.to_thread(still_running, message_id):
                         await asyncio.to_thread(persist, message_id, content, "stopped")
                         finished = True
+                        outcome = "stopped"
                         yield event("done", {"status": "stopped"})
                         return
                     last_check = time.monotonic()
@@ -138,6 +141,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                 except StopAsyncIteration:
                     active = await asyncio.to_thread(persist, message_id, content, "complete")
                     finished = True
+                    outcome = "complete" if active else "stopped"
                     yield event("done", {"status": "complete" if active else "stopped"})
                     return
                 finally:
@@ -163,6 +167,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
         )
         await asyncio.to_thread(persist, message_id, content, "failed")
         finished = True
+        outcome = "failed"
         yield event("error", {"message": _failure_message(exc)})
     finally:
         # ASGI disconnect cancels the request scope; final state must still reach PostgreSQL.
@@ -173,3 +178,10 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
             await upstream.aclose()
             if not finished:
                 await asyncio.to_thread(persist, message_id, content, "stopped")
+                outcome = "stopped"
+            logger.info(
+                "generation_finished model_id=%s outcome=%s duration_ms=%d",
+                model_id,
+                outcome,
+                round((time.monotonic() - started_at) * 1000),
+            )
