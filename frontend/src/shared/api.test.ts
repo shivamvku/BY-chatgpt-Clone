@@ -92,7 +92,7 @@ describe('SSE streaming parser', () => {
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(
-          new TextEncoder().encode('event: delta\\ndata: {not-json}\\n\\n'),
+          new TextEncoder().encode('event: delta\ndata: {not-json}\n\n'),
         );
         controller.close();
       },
