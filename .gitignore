@@ -15,9 +15,7 @@
 /docs/interview-walkthrough.md
 /docs/prep/
 
-# Generated diagrams (regenerate with tools/generate_all_diagrams.py)
-docs/diagrams/generated/*.png
-docs/diagrams/generated/*.svg
+# Generated diagrams are committed to Git for documentation
 
 # Python environments, caches, and package output
 .venv/
