@@ -85,3 +85,38 @@ def test_stale_generation_reconciliation_releases_reservation(app):
 
     assert _usage_for_user(user["id"]).reserved_tokens == 0
     assert _event_for_message(message_id).status == "failed"
+
+def test_late_persist_cannot_resurrect_reconciled_generation(app):
+    client = TestClient(app)
+    user = register(client)
+    conversation_id = conversation(client)
+    response = send(client, conversation_id)
+    assert response.status_code == 200
+    message_id = response.json()["id"]
+
+    before = _usage_for_user(user["id"])
+    assert before.reserved_tokens > 0
+
+    with Session(get_engine()) as db:
+        row = db.get(Message, message_id)
+        original_content = row.content
+        row.updated_at = now() - get_settings().generation_timeout - 61
+        db.commit()
+
+        assert reconcile_stale_generations(db, batch_size=10) == 1
+        assert db.get(Message, message_id).status == "failed"
+
+    # Simulate a delayed generation worker completing after the stale-job won.
+    from app.services.generation import persist
+
+    assert persist(message_id, "late provider output", "complete") is False
+
+    with Session(get_engine()) as db:
+        row = db.get(Message, message_id)
+        assert row.status == "failed"
+        assert row.content == original_content
+
+    assert _usage_for_user(user["id"]).reserved_tokens == 0
+    event = _event_for_message(message_id)
+    assert event.status == "failed"
+    assert event.reserved_tokens > 0  # Keep reservation amount for audit.
