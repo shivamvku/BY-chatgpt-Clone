@@ -78,7 +78,9 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         # Terminal states are immutable: a delayed provider worker must never
         # resurrect a reconciled/failed/stopped generation or rewrite its audit event.
         if row.status in {"complete", "failed", "stopped"}:
-            return row.status == "complete"
+            # Only a duplicate completion may be treated as active. In particular,
+            # a late streaming write must stop the producer from emitting more deltas.
+            return row.status == "complete" and status == "complete"
 
         stopping = row.status == "stopping"
         row.content = content
@@ -98,7 +100,7 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
 
 
 def event(kind: str, value: dict) -> str:
-    return f"event: {kind}\ndata: {json.dumps(value)}\n\n"
+    return f"event: {kind}\\ndata: {json.dumps(value)}\\n\\n"
 
 
 def still_running(message_id: str) -> bool:
