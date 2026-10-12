@@ -5,15 +5,15 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_engine
-from app.models.entities import Message, RateBucket, UsageEvent
-from app.services.conversations import prepare_generation
-from app.services.security import digest
-from tests.test_application import conversation, register
+from app.models.entities import Message, RateBucket, Usage, UsageEvent, now
+from app.services.conversations import prepare_generation, reconcile_stale_generations
+from app.services.generation import persist\nfrom app.services.security import digest
+from tests.test_application import conversation, register, send
 
 
 def test_global_token_reservation_is_atomic_and_rejected_request_rolls_back(
@@ -74,5 +74,53 @@ def test_global_token_reservation_is_atomic_and_rejected_request_rolls_back(
             rows = db.scalars(select(Message).where(Message.request_id.in_(request_ids))).all()
             assert len(rows) == 1
             assert rows[0].id in accepted_ids
+    finally:
+        get_settings.cache_clear()
+
+
+
+def test_stale_generation_cannot_resurrect_or_release_quota_twice(app, monkeypatch):
+    if get_engine().dialect.name != "postgresql":
+        pytest.skip("Stale-generation accounting must be exercised against PostgreSQL")
+
+    monkeypatch.setenv("GLOBAL_DAILY_TOKEN_LIMIT", "1000000")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    user = register(client, "stale-generation@example.com")
+    conversation_id = conversation(client)
+    response = send(client, conversation_id)
+    assert response.status_code == 200
+    message_id = response.json()["id"]
+
+    try:
+        with Session(get_engine()) as db:
+            message = db.get(Message, message_id)
+            message.updated_at = 0
+            db.commit()
+
+        with Session(get_engine()) as db:
+            assert reconcile_stale_generations(db) == 1
+
+        # A late provider worker must not overwrite the reconciler's terminal state.
+        assert persist(message_id, "late provider output", "complete") is False
+        # Repeated terminal writes must not decrement either quota counter again.
+        assert persist(message_id, "late provider output", "failed") is False
+
+        with Session(get_engine()) as db:
+            message = db.get(Message, message_id)
+            usage_event = db.get(UsageEvent, message_id)
+            usage = db.get(Usage, (user["id"], str(datetime.fromtimestamp(
+                usage_event.created_at, UTC
+            ).date())))
+            bucket = db.get(
+                RateBucket,
+                digest(f"global-tokens:{datetime.fromtimestamp(usage_event.created_at, UTC).date()}"),
+            )
+
+            assert message.status == "failed"
+            assert message.content != "late provider output"
+            assert usage_event.status == "failed"
+            assert usage is not None and usage.reserved_tokens == 0
+            assert bucket is not None and bucket.count == 0
     finally:
         get_settings.cache_clear()
