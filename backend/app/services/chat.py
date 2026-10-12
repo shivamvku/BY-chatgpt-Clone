@@ -18,7 +18,7 @@ from app.schemas.contracts import (
     SendMessage,
 )
 from app.services import provider
-from app.services.conversations import owned, prepare_generation
+from app.services.conversations import owned, prepare_generation, release_reservation
 from app.services.generation import claim, events
 from app.services.retention import cutoff
 from app.services.security import Identity
@@ -146,6 +146,7 @@ def messages(*, conversation_id: str, current: Identity, db: Session):
             and row.updated_at < now() - get_settings().generation_timeout - 60
         ):
             row.status = "failed"
+            release_reservation(db, row.id, "failed")
     db.commit()
     return rows
 
@@ -190,6 +191,8 @@ def stop(*, message_id: str, current: Identity, db: Session):
     owned(db, current.user.id, row.conversation_id)
     if row.status in {"pending", "streaming"}:
         row.status = "stopped" if row.status == "pending" else "stopping"
+        if row.status == "stopped":
+            release_reservation(db, row.id, "stopped")
         db.commit()
 
 

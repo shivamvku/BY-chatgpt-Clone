@@ -25,7 +25,7 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setenv("SERVE_FRONTEND", "false")
     monkeypatch.setenv("ALLOWED_ORIGINS", "http://testserver")
     monkeypatch.setenv("GEMINI_API_KEY", "test-provider-key")
-    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")  # Add Groq API key for testing
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
     get_settings.cache_clear()
     get_engine.cache_clear()
     Base.metadata.create_all(get_engine())
@@ -400,3 +400,10 @@ def test_production_cookie_attributes(app, monkeypatch):
     assert all(value in cookie for value in ["HttpOnly", "Secure", "SameSite=lax", "Path=/"])
     assert "Domain=" not in cookie
     assert client.get("/api/docs").status_code == 404
+
+def test_readiness_checks_migrated_database_schema(app):
+    client = TestClient(app)
+    response = client.get("/api/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
+

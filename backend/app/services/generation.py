@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.db.session import get_engine
 from app.models.entities import Conversation, Message, UsageEvent, now
 from app.services import provider
-from app.services.conversations import context_messages, owned
+from app.services.conversations import context_messages, owned, release_reservation
 
 logger = logging.getLogger(__name__)
 
@@ -75,18 +75,28 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
         row = db.scalar(select(Message).where(Message.id == message_id).with_for_update())
         if not row:
             return False
-        stopping = row.status in {"stopping", "stopped"}
+        # Terminal states are immutable: a delayed provider worker must never
+        # resurrect a reconciled/failed/stopped generation or rewrite its audit event.
+        if row.status in {"complete", "failed", "stopped"}:
+            # Only a duplicate completion may be treated as active. In particular,
+            # a late streaming write must stop the producer from emitting more deltas.
+            return row.status == "complete" and status == "complete"
+
+        stopping = row.status == "stopping"
         row.content = content
         row.updated_at = now()
         row.status = "stopped" if stopping else status
         usage = db.get(UsageEvent, message_id)
         if usage:
-            usage.status = row.status
+            if row.status in {"failed", "stopped"}:
+                release_reservation(db, message_id, row.status)
+            else:
+                usage.status = row.status
         conversation = db.get(Conversation, row.conversation_id)
         if conversation:
             conversation.updated_at = now()
         db.commit()
-        return not stopping
+        return not stopping and row.status not in {"failed", "stopped"}
 
 
 def event(kind: str, value: dict) -> str:
@@ -101,6 +111,8 @@ def still_running(message_id: str) -> bool:
 async def events(message_id: str, context: tuple[list[dict[str, str]], str], request):
     messages, model_id = context
     content, finished = "", False
+    started_at = time.monotonic()
+    outcome = "stopped"
     last_save = 0.0
     last_check = 0.0
     upstream = provider.stream_completion(messages, model_id)
@@ -118,6 +130,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                     if not await asyncio.to_thread(still_running, message_id):
                         await asyncio.to_thread(persist, message_id, content, "stopped")
                         finished = True
+                        outcome = "stopped"
                         yield event("done", {"status": "stopped"})
                         return
                     last_check = time.monotonic()
@@ -128,6 +141,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
                 except StopAsyncIteration:
                     active = await asyncio.to_thread(persist, message_id, content, "complete")
                     finished = True
+                    outcome = "complete" if active else "stopped"
                     yield event("done", {"status": "complete" if active else "stopped"})
                     return
                 finally:
@@ -153,6 +167,7 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
         )
         await asyncio.to_thread(persist, message_id, content, "failed")
         finished = True
+        outcome = "failed"
         yield event("error", {"message": _failure_message(exc)})
     finally:
         # ASGI disconnect cancels the request scope; final state must still reach PostgreSQL.
@@ -163,3 +178,10 @@ async def events(message_id: str, context: tuple[list[dict[str, str]], str], req
             await upstream.aclose()
             if not finished:
                 await asyncio.to_thread(persist, message_id, content, "stopped")
+                outcome = "stopped"
+            logger.info(
+                "generation_finished model_id=%s outcome=%s duration_ms=%d",
+                model_id,
+                outcome,
+                round((time.monotonic() - started_at) * 1000),
+            )

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, request, setCsrf } from './api';
+import { ApiError, request, setCsrf, streamResponse } from './api';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -54,5 +54,57 @@ describe('CSRF recovery', () => {
     const adminRequest = request('/admin/users', { method: 'PATCH', body: '{}' });
     await expect(adminRequest).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SSE streaming parser', () => {
+  it('handles CRLF split across chunks and a final frame without a blank terminator', async () => {
+    const chunks = [
+      'event: delta\r',
+      '\ndata: {"text":"hello"}\r\n\r',
+      '\nevent: done\r\ndata: {"status":"complete"}',
+    ];
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const encoder = new TextEncoder();
+        chunks.forEach((chunk) => controller.enqueue(encoder.encode(chunk)));
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(body, { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const events: Array<{ kind: string; data: Record<string, string> }> = [];
+    await streamResponse('message-id', new AbortController().signal, (kind, data) => {
+      events.push({ kind, data });
+    });
+
+    expect(events).toEqual([
+      { kind: 'delta', data: { text: 'hello' } },
+      { kind: 'done', data: { status: 'complete' } },
+    ]);
+  });
+
+  it('rejects malformed event payloads instead of silently treating them as valid data', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('event: delta\ndata: {not-json}\n\n'));
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(body, { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const received: Array<{ kind: string; data: Record<string, string> }> = [];
+    await expect(
+      streamResponse('message-id', new AbortController().signal, (kind, data) => {
+        received.push({ kind, data });
+      }),
+    ).rejects.toThrow();
+    expect(received).toEqual([]);
   });
 });

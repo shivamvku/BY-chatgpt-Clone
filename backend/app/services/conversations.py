@@ -2,7 +2,7 @@ import re
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -157,6 +157,7 @@ def prepare_generation(
     for row in running:
         if row.updated_at < now() - settings.generation_timeout - 60:
             row.status = "failed"
+            release_reservation(db, row.id, "failed")
         else:
             raise HTTPException(409, "Stop the current response before sending another")
     ancestors = branch(db, conversation_id, parent_id)
@@ -185,7 +186,8 @@ def prepare_generation(
     # UTF-8 bytes bound text tokenization conservatively; reserve output and overhead upfront.
     reserve = sum(len(row["content"].encode("utf-8")) + 32 for row in context)
     reserve += settings.max_output_tokens + 256
-    day = datetime.now(UTC).date().isoformat()
+    reservation_time = datetime.now(UTC)
+    day = reservation_time.date().isoformat()
     insert = pg_insert if db.get_bind().dialect.name == "postgresql" else sqlite_insert
     global_key = digest(f"global-tokens:{day}")
     statement = insert(RateBucket).values(key=global_key, count=reserve, expires_at=now() + 86400)
@@ -232,8 +234,9 @@ def prepare_generation(
             UsageEvent.subscription_id == subscription.id,
             UsageEvent.created_at
             >= int(
-                datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+                reservation_time.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
             ),
+            UsageEvent.status.not_in(("failed", "stopped")),
         )
     )
     if shared_reserved + reserve > token_limit:
@@ -245,8 +248,76 @@ def prepare_generation(
             subscription_id=subscription.id,
             model=model_id,
             reserved_tokens=reserve,
+            created_at=int(reservation_time.timestamp()),
         )
     )
     conversation.updated_at = now()
     db.commit()
     return answer
+
+
+def release_reservation(db: Session, message_id: str, terminal_status: str) -> None:
+    """Release quota for a failed/stopped generation exactly once.
+
+    Successful generations retain their conservative reservation because provider
+    token usage is not consistently available across adapters. UsageEvent keeps
+    the original reservation for audit; its terminal status excludes released work
+    from subscription quota totals.
+    """
+    if terminal_status not in {"failed", "stopped"}:
+        raise ValueError("Only failed or stopped generations release reservations")
+
+    usage_event = db.scalar(
+        select(UsageEvent).where(UsageEvent.id == message_id).with_for_update()
+    )
+    if not usage_event or usage_event.status in {"complete", "failed", "stopped"}:
+        return
+
+    reserved = max(0, usage_event.reserved_tokens)
+    day = datetime.fromtimestamp(usage_event.created_at, UTC).date().isoformat()
+    db.execute(
+        update(Usage)
+        .where(Usage.user_id == usage_event.user_id, Usage.day == day)
+        .values(
+            reserved_tokens=case(
+                (Usage.reserved_tokens >= reserved, Usage.reserved_tokens - reserved),
+                else_=0,
+            )
+        )
+    )
+    global_key = digest(f"global-tokens:{day}")
+    db.execute(
+        update(RateBucket)
+        .where(RateBucket.key == global_key)
+        .values(
+            count=case(
+                (RateBucket.count >= reserved, RateBucket.count - reserved),
+                else_=0,
+            )
+        )
+    )
+    usage_event.status = terminal_status
+
+
+def reconcile_stale_generations(db: Session, batch_size: int = 100) -> int:
+    """Fail stale in-flight responses and release their reservations in bounded batches."""
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+    threshold = now() - get_settings().generation_timeout - 60
+    rows = db.scalars(
+        select(Message)
+        .where(
+            Message.status.in_(("pending", "streaming", "stopping")),
+            Message.updated_at < threshold,
+        )
+        .order_by(Message.updated_at, Message.id)
+        .limit(batch_size)
+        .with_for_update()
+    ).all()
+    for row in rows:
+        row.status = "failed"
+        row.updated_at = now()
+        release_reservation(db, row.id, "failed")
+    if rows:
+        db.commit()
+    return len(rows)

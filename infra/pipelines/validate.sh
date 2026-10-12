@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-terraform fmt -check -recursive infra
+terraform fmt -check -diff -recursive infra
 for root in infra/bootstrap infra/terraform/environments/dev/{foundation,migrations,application,domains}; do
   terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
   terraform -chdir="$root" validate
