@@ -53,6 +53,7 @@ These diagrams remain for reference but are superseded by the Azure-specific dia
 - **Security Sensitive**: No credentials or internal hostnames in diagrams
 - **Compliance**: Content rephrased for licensing compliance where sourced externally
 - **Maintenance**: Update diagrams in same PR as infrastructure changes
+- **Historical Documents**: Legacy diagrams archived in [docs/archive/](../archive/) when superseded
 
 ## Rendering Requirements
 
