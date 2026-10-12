@@ -86,4 +86,28 @@ describe('SSE streaming parser', () => {
       { kind: 'done', data: { status: 'complete' } },
     ]);
   });
+
+
+  it('rejects malformed event payloads instead of silently treating them as valid data', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode('event: delta\\ndata: {not-json}\\n\\n'),
+        );
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(body, { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const received: Array<{ kind: string; data: Record<string, string> }> = [];
+    await expect(
+      streamResponse('message-id', new AbortController().signal, (kind, data) => {
+        received.push({ kind, data });
+      }),
+    ).rejects.toThrow();
+    expect(received).toEqual([]);
+  });
 });
