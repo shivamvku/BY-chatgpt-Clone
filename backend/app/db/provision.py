@@ -68,7 +68,9 @@ def provision_runtime():
             )
         ).one()
         if any(runtime_privileges):
-            raise RuntimeError(\n                "chat_runtime must not have superuser, database-create, or role-create privileges"\n            )
+            raise RuntimeError(
+                "chat_runtime must not have superuser, database-create, or role-create privileges"
+            )
         if connection.execute(
             text("SELECT has_schema_privilege('chat_runtime', 'public', 'CREATE')")
         ).scalar():
