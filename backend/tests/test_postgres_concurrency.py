@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_engine
-from app.models.entities import Message, RateBucket, Usage, UsageEvent, now
+from app.models.entities import Message, RateBucket, Usage, UsageEvent
 from app.services.conversations import prepare_generation, reconcile_stale_generations
 from app.services.generation import persist\nfrom app.services.security import digest
 from tests.test_application import conversation, register, send
@@ -109,13 +109,9 @@ def test_stale_generation_cannot_resurrect_or_release_quota_twice(app, monkeypat
         with Session(get_engine()) as db:
             message = db.get(Message, message_id)
             usage_event = db.get(UsageEvent, message_id)
-            usage = db.get(Usage, (user["id"], str(datetime.fromtimestamp(
-                usage_event.created_at, UTC
-            ).date())))
-            bucket = db.get(
-                RateBucket,
-                digest(f"global-tokens:{datetime.fromtimestamp(usage_event.created_at, UTC).date()}"),
-            )
+            day = datetime.fromtimestamp(usage_event.created_at, UTC).date().isoformat()
+            usage = db.get(Usage, (user["id"], day))
+            bucket = db.get(RateBucket, digest(f"global-tokens:{day}"))
 
             assert message.status == "failed"
             assert message.content != "late provider output"
