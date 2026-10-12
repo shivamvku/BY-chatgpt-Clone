@@ -8,50 +8,9 @@ A ChatGPT-style full-stack application built with React, TypeScript, Material UI
 
 YounderChat uses a modern, cloud-native architecture deployed on Microsoft Azure with comprehensive security, scalability, and monitoring capabilities.
 
-```mermaid
-flowchart LR
-  UI["Browser UI<br/>React + TypeScript + MUI"]
-  API["FastAPI<br/>REST + auth + authorization"]
-  GEN["Generation service<br/>normalized streaming + stop"]
-  DB[("Azure PostgreSQL<br/>Private network + SSL")]
-  P["Provider abstraction<br/>model policy + adapters"]
-  G["Gemini API"]
-  R["Groq API"]
-  
-  UI -->|"HTTPS / session cookie / CSRF"| API
-  API <--> DB
-  API --> GEN
-  GEN --> P
-  P -->|"server-side key"| G
-  P -->|"server-side key"| R
-  
-  subgraph Azure["Azure Infrastructure"]
-    ACR["Container Registry<br/>Private image repository"]
-    CAE["Container App Environment<br/>VNet-integrated"]
-    CA["Container Apps<br/>Auto-scaling 0-2 replicas"]
-    KV["Key Vault<br/>Managed identity access"]
-    VNet["Virtual Network<br/>10.42.0.0/16 with subnets"]
-    LA["Log Analytics<br/>Centralized monitoring"]
-  end
-  
-  subgraph CI_CD["CI/CD Pipeline"]
-    GHA["GitHub Actions<br/>OIDC federation"]
-    TF["Terraform<br/>Infrastructure as Code"]
-  end
-  
-  CAE --> CA
-  CA --> API
-  CA -.->|"Managed Identity"| KV
-  CA -.->|"Private network"| DB
-  ACR -.->|"Image deployment"| CA
-  CA --> LA
-  
-  GHA --> ACR
-  GHA --> TF
-  TF --> CAE
-  TF --> VNet
-  TF --> KV
-```
+![YounderChat System Architecture](docs/diagrams/generated/system-overview.png)
+
+*Professional Azure architecture diagram showing Container Apps, PostgreSQL Flexible Server, Key Vault, and CI/CD pipeline*
 
 **Azure Architecture Details:**
 - **[Complete Infrastructure Overview](docs/diagrams/azure-infrastructure.md)** - All Azure services with configurations

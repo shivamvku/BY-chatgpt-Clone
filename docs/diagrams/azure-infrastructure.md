@@ -6,80 +6,9 @@ This document provides a comprehensive overview of all Azure services used in th
 
 YounderChat is deployed on Azure using a modern container-based architecture with private networking, managed identity-based security, and Infrastructure as Code (Terraform) deployment practices.
 
-```mermaid
-graph TB
-    subgraph "Internet"
-        User["Users<br/>HTTPS Traffic"]
-        DNS["GoDaddy DNS<br/>aichat.sdigurukulam.in"]
-        GitHub["GitHub Actions<br/>CI/CD Pipeline"]
-    end
+![Azure Infrastructure Overview](generated/azure-infrastructure.png)
 
-    subgraph "Azure Subscription - Central US"
-        subgraph "Resource Group"
-            subgraph "Virtual Network - 10.42.0.0/16"
-                subgraph "Container Apps Subnet - 10.42.0.0/23"
-                    CAE["Container App Environment<br/>Consumption Profile"]
-                    CA["Container App<br/>YounderChat Application<br/>0.5 CPU, 1Gi Memory<br/>0-2 Replicas"]
-                end
-                
-                subgraph "Database Subnet - 10.42.2.0/24"
-                    PG["PostgreSQL Flexible Server<br/>Version 16<br/>B_Standard_B1ms<br/>32GB Storage<br/>Private Network Only"]
-                end
-            end
-            
-            subgraph "Security & Identity"
-                KV["Key Vault<br/>Standard SKU<br/>RBAC Enabled<br/>7-day Soft Delete"]
-                MI["User Assigned<br/>Managed Identity<br/>Runtime Access"]
-                MIMG["User Assigned<br/>Managed Identity<br/>Migration Access"]
-            end
-            
-            subgraph "Container Services"
-                ACR["Container Registry<br/>Standard SKU<br/>Admin Disabled<br/>Private Access"]
-            end
-            
-            subgraph "Monitoring"
-                LA["Log Analytics<br/>PerGB2018 SKU<br/>30-day Retention<br/>1GB Daily Quota"]
-            end
-            
-            subgraph "Network Security"
-                NSG["Network Security Group<br/>Database Protection"]
-                DNS_ZONE["Private DNS Zone<br/>*.postgres.database.azure.com"]
-            end
-        end
-    end
-
-    subgraph "External Providers"
-        GEMINI["Google Gemini API"]
-        GROQ["Groq API"]
-    end
-
-    %% User flows
-    User --> DNS
-    DNS --> CA
-    CA --> PG
-    
-    %% CI/CD flows
-    GitHub --> ACR
-    ACR --> CA
-    
-    %% Security flows
-    CA -.->|"Managed Identity"| KV
-    KV -.->|"Secret References"| CA
-    MI -.->|"RBAC: Key Vault Secrets User"| KV
-    MI -.->|"RBAC: AcrPull"| ACR
-    
-    %% AI Provider flows
-    CA -->|"Server-side API Keys"| GEMINI
-    CA -->|"Server-side API Keys"| GROQ
-    
-    %% Monitoring flows
-    CA --> LA
-    CAE --> LA
-    
-    %% Network security
-    NSG --> PG
-    DNS_ZONE --> PG
-```
+> *Generated diagram — run `python tools/generate_all_diagrams.py` to refresh*
 
 ## Service Configuration Details
 

@@ -6,71 +6,9 @@ This document details the network architecture of YounderChat's Azure deployment
 
 The YounderChat application uses a hub-and-spoke network architecture within a single Virtual Network, with dedicated subnets for different service tiers and comprehensive network security controls.
 
-```mermaid
-graph TB
-    subgraph "Internet"
-        CLIENT["Client Browsers<br/>HTTPS Traffic"]
-        GITHUB["GitHub Actions<br/>CI/CD Pipeline"]
-    end
+![YounderChat Network Topology](generated/network-topology.png)
 
-    subgraph "Azure Virtual Network - 10.42.0.0/16"
-        subgraph "Container Apps Subnet - 10.42.0.0/23"
-            direction TB
-            CAE["Container App Environment<br/>Consumption Profile"]
-            CA["Container App<br/>Public Ingress Enabled<br/>Port 8000 Internal"]
-        end
-
-        subgraph "Database Subnet - 10.42.2.0/24"
-            direction TB
-            PG["PostgreSQL Flexible Server<br/>Private Endpoint<br/>Port 5432"]
-            NSG_DB["Network Security Group<br/>Database Protection"]
-        end
-
-        subgraph "Optional: Management Subnet - 10.42.3.0/24"
-            direction TB
-            VM["Database Access VM<br/>(When db_access.enabled)"]
-        end
-
-        subgraph "Private DNS Resolution"
-            DNS_ZONE["Private DNS Zone<br/>*.postgres.database.azure.com"]
-        end
-    end
-
-    subgraph "External Services"
-        ACR["Azure Container Registry<br/>Private Access"]
-        KV["Key Vault<br/>Private Access"]
-        LA["Log Analytics<br/>HTTPS API"]
-    end
-
-    %% Traffic flows with protocols and ports
-    CLIENT -->|"HTTPS/443"| CA
-    CA -->|"Private/5432<br/>SSL Required"| PG
-    CA -.->|"HTTPS/443<br/>Managed Identity"| KV
-    CA -.->|"HTTPS/443<br/>Managed Identity"| ACR
-    CA -->|"HTTPS/443<br/>Logs & Metrics"| LA
-
-    %% CI/CD flows
-    GITHUB -->|"HTTPS/443<br/>OIDC Auth"| ACR
-    GITHUB -.->|"Azure CLI<br/>Container App Update"| CA
-
-    %% Management access (optional)
-    VM -.->|"TCP/5432<br/>SSH Tunnel"| PG
-
-    %% Network security associations
-    NSG_DB --> PG
-    DNS_ZONE -.->|"Private Resolution"| PG
-
-    %% Network boundaries
-    classDef subnet fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef security fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef external fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-
-    class CAE,CA subnet
-    class PG,NSG_DB subnet
-    class VM subnet
-    class DNS_ZONE security
-    class ACR,KV,LA external
-```
+> *Generated diagram — run `python tools/generate_all_diagrams.py` to refresh*
 
 ## Virtual Network Configuration
 
@@ -94,20 +32,9 @@ graph TB
 
 ### Database Subnet NSG Rules
 
-```mermaid
-graph TD
-    subgraph "Database NSG - {name}-db-nsg"
-        RULE1["Priority 100: AllowAppPostgres<br/>Source: 10.42.0.0/23<br/>Destination: 10.42.2.0/24<br/>Protocol: TCP, Port: 5432<br/>Action: ALLOW"]
-        
-        RULE2["Priority 110: AllowPostgresInternal<br/>Source: 10.42.2.0/24<br/>Destination: 10.42.2.0/24<br/>Protocol: Any, Port: Any<br/>Action: ALLOW"]
-        
-        RULE3["Priority 120: AllowManagementPostgres<br/>Source: 10.42.3.0/24<br/>Destination: 10.42.2.0/24<br/>Protocol: TCP, Port: 5432<br/>Action: ALLOW<br/>(Conditional)"]
-        
-        RULE4["Priority 200: DenyOtherInbound<br/>Source: Any<br/>Destination: Any<br/>Protocol: Any, Port: Any<br/>Action: DENY"]
-    end
+![Database NSG Rules](generated/network-topology.png)
 
-    RULE1 --> RULE2 --> RULE3 --> RULE4
-```
+> *NSG rules are shown in the main network topology diagram above*
 
 ### NSG Rules Details
 
@@ -135,43 +62,15 @@ graph TD
 
 ### Inbound Traffic Flows
 
-```mermaid
-sequenceDiagram
-    participant User as Internet User
-    participant CA as Container App
-    participant PG as PostgreSQL
-    participant KV as Key Vault
+![Inbound Traffic Flows](generated/network-topology.png)
 
-    User->>CA: HTTPS/443 (Public Ingress)
-    CA->>KV: HTTPS/443 (Secret Retrieval)
-    Note over CA,KV: Managed Identity Authentication
-    KV-->>CA: Database Connection String
-    CA->>PG: TCP/5432 (Private Network)
-    Note over CA,PG: SSL/TLS Required
-    PG-->>CA: Query Results
-    CA-->>User: HTTP Response
-```
+> *Inbound traffic flows are shown in the main network topology diagram above*
 
 ### Outbound Traffic Flows
 
-```mermaid
-sequenceDiagram
-    participant CA as Container App
-    participant ACR as Container Registry
-    participant AI as AI Providers
-    participant LA as Log Analytics
+![Outbound Traffic Flows](generated/network-topology.png)
 
-    Note over CA: Application Startup
-    CA->>ACR: HTTPS/443 (Image Pull)
-    Note over CA,ACR: Managed Identity (AcrPull)
-    
-    Note over CA: During Operation
-    CA->>AI: HTTPS/443 (API Calls)
-    Note over CA,AI: Server-side API Keys
-    
-    CA->>LA: HTTPS/443 (Logs & Metrics)
-    Note over CA,LA: Built-in Integration
-```
+> *Outbound traffic flows are shown in the main network topology diagram above*
 
 ## IP Address Allocation
 

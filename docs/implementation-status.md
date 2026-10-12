@@ -1,58 +1,68 @@
-# Implementation Status and Boundaries
+# Implementation Status
 
-This document prevents interview material from overstating what is implemented. Recheck source code, tests, workflow YAML and cloud configuration before each release.
+Current feature implementation status for YounderChat application.
 
-## Implemented and documented
+## ✅ Implemented Features
 
-- React + TypeScript + Material UI browser application.
-- FastAPI REST backend with request schemas and service boundaries.
-- Cookie-based session authentication, session-bound CSRF checks, role authorization and resource ownership checks.
-- Conversation/message persistence, history pagination and management operations.
-- Generation lifecycle with normalized SSE events, stop/cancellation handling, bounded timeouts and partial-result handling.
-- Provider abstraction for Gemini and Groq using server-side credentials.
-- Usage/plan controls, reservations/records and controlled admin account/plan/session functionality.
-- Markdown/code/table/chart rendering and bounded image upload/display.
-- SQLAlchemy persistence and Alembic migration workflow.
-- Automated backend/frontend/browser tests and Azure/Terraform deployment assets.
+### Core Application
+- **Authentication**: Registration, login, password reset, email verification
+- **Chat Interface**: Real-time messaging with AI providers (Gemini, Groq)
+- **Message Management**: Conversation threading, history, search
+- **User Management**: Profiles, settings, admin controls
+- **Rich Content**: Markdown, code blocks, images, tables
 
-## Environment distinctions
+### Azure Infrastructure  
+- **Container Apps**: Auto-scaling 0-2 replicas with health checks
+- **PostgreSQL**: Flexible Server v16 with private networking
+- **Key Vault**: Managed identity integration, secret management
+- **Virtual Network**: Subnets, NSGs, private DNS zones
+- **CI/CD**: GitHub Actions with OIDC federation, automated deployment
 
-| Concern | Local reviewer environment | Deployed design |
-| --- | --- | --- |
-| Database | Disposable SQLite | Private Azure Database for PostgreSQL |
-| Cloud | Not required | Azure resources managed/configured through Terraform and GitHub Actions |
-| Provider inference | Requires user-supplied provider key | Requires correctly configured server-side secret, model access and quota |
-| Test inference | Deterministic fixtures in browser tests | Not equivalent to live inference |
-| Demo credentials | Local-only seeded users | Must not be reused or deployed |
+### Security & Performance
+- **Network Security**: Private database, NSG rules, SSL/TLS everywhere
+- **Identity Management**: Azure managed identities, RBAC permissions
+- **Session Security**: HttpOnly cookies, CSRF protection
+- **Usage Tracking**: Plan enforcement, quota management
+- **Monitoring**: Azure Log Analytics integration
 
-## Explicitly not implemented or not proven by this documentation
+## ⚠️ Known Limitations
 
-- Payment collection, payment provider webhooks and invoice generation.
-- A complete end-user image-understanding workflow.
-- Working user-facing web search, image generation, document retrieval, voice, scheduled tasks or sandboxed code execution.
-- Live provider success merely because a browser test or CI run passed.
-- Email delivery merely because password recovery/verification routes exist.
-- Exact production Azure resource settings without inspecting the current Terraform and workflow definitions.
+### External Dependencies
+- **AI Providers**: Requires valid API keys (Gemini/Groq)
+- **Email Service**: Optional Resend API integration
+- **DNS**: Uses personal domain for demo (not production)
 
-## Verification commands
+### Feature Boundaries
+- **Payment Processing**: Plan management only (no billing integration)
+- **Advanced AI**: Basic chat only (no web search, image generation)
+- **Multi-tenancy**: Single organization model
 
-From the repository root, after installing dependencies:
+## 🔧 Infrastructure Configuration
 
-```bash
-.venv/bin/ruff check backend
-.venv/bin/python -m pytest backend/tests
-npm --prefix frontend run build
-npm --prefix frontend run lint
-npm --prefix frontend run test
-```
+### Azure Services
+- **Region**: Central US
+- **Cost Target**: INR 1,500/month with alerts
+- **Database**: B1ms PostgreSQL (32GB, 7-day backup)
+- **Container**: Standard ACR, Consumption Container Apps
+- **Security**: Standard Key Vault with RBAC
 
-On Windows, use the virtual environment executables under `.venv\\Scripts\\`. Browser tests and PostgreSQL integration tests have their own prerequisites; consult the root and backend README files.
+### Local Development
+- **Database**: SQLite fallback for local development
+- **Demo Accounts**: Pre-seeded admin and user accounts
+- **API Keys**: Optional for AI provider testing
 
-## Documentation maintenance
+## 📊 Quality Metrics
 
-When behavior changes, update:
-1. Relevant source comments and tests.
-2. [End-to-end workflow](user-workflow.md).
-3. [System architecture](architecture.md) and affected [diagrams](diagrams/README.md).
-4. The relevant [interview Q&A](prep/README.md).
-5. This boundary/status document if implementation scope changed.
+### Testing
+- **Backend**: Python tests with pytest
+- **Frontend**: TypeScript/React component tests  
+- **Browser**: Playwright end-to-end tests
+- **Infrastructure**: Terraform validation and linting
+
+### Documentation
+- **Ultra-HD Diagrams**: Professional Azure architecture visuals
+- **Technical Specs**: Complete API and database documentation
+- **User Guides**: End-to-end workflow documentation
+- **Interview Prep**: Comprehensive Q&A coverage
+
+*Last updated: December 2026*

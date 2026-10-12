@@ -1,25 +1,36 @@
 # YounderChat Documentation
 
-This folder is the documentation home for the application. Start here, then follow the topic guides.
+Professional documentation for the YounderChat Azure-based ChatGPT-style application.
 
-## Product and engineering guides
+## 🎯 Quick Start
 
-- [End-to-end user workflow](user-workflow.md) — registration/login through chat, history, settings, administration and logout.
-- [System architecture](architecture.md) — component boundaries, request paths, data stores and Azure deployment.
-- [Technical diagrams](diagrams/README.md) — Mermaid diagrams for architecture, workflows, auth, streaming, CI/CD and data relationships.
-- [Interview preparation](prep/README.md) — topic-based question bank with answers and follow-up prompts.
-- [Implementation status and limitations](implementation-status.md) — distinguish implemented behavior from external dependencies and non-goals.
+- **[System Architecture](architecture.md)** - Complete system overview and Azure infrastructure
+- **[Implementation Status](implementation-status.md)** - Current features and limitations
+- **[User Workflow](user-workflow.md)** - End-to-end user journey
 
-## Existing documentation
+## 📊 Azure Architecture Diagrams
 
-- [Backend boundaries and database migrations](../backend/README.md)
-- [Repository overview and local setup](../README.md)
+Professional diagrams showing the complete Azure infrastructure:
 
-## Documentation rules
+- **[Azure Infrastructure Overview](diagrams/azure-infrastructure.md)** - Complete Azure services with configurations
+- **[Network Topology](diagrams/network-topology.md)** - VNet design, subnets, and security groups  
+- **[Security Architecture](diagrams/security-architecture.md)** - Identity management, RBAC, and secrets
+- **[CI/CD Pipeline](diagrams/cicd-pipeline.md)** - GitHub Actions to Azure deployment
+- **[Data Model](diagrams/data-model.md)** - PostgreSQL schema and relationships
+- **[User Workflow Diagrams](diagrams/user-workflow.md)** - User journey through Azure services
 
-1. Treat source code, tests, migration files and deployed workflow configuration as the source of truth.
-2. Diagrams describe logical boundaries; confirm resource names, regions, SKU, network rules and identities against Terraform and workflow files before making operational changes.
-3. Never document live secrets, tokens, connection strings, password-reset tokens, or production credentials.
-4. Mark behavior that depends on external providers, email delivery, cloud configuration or account quotas.
-5. Update this index and relevant diagrams whenever an API contract, security control, deployment resource or user journey changes.
-6. Mermaid is used for editable, version-controlled diagrams. Keep node labels concise and include a short explanation below each diagram.
+*All diagrams are generated as Ultra-HD images for crystal-clear presentation quality.*
+
+## 📋 Implementation Details
+
+- **[Implementation Plan](implementation-plan.md)** - Project scope and acceptance criteria
+- **[Screenshots](screenshots/)** - Application UI examples
+
+## 🎓 Interview Preparation
+
+*Interview preparation materials are available but stored separately for privacy.*
+
+## 📁 Related Documentation
+
+- **[Backend API](../backend/README.md)** - Database schemas and API endpoints
+- **[Repository Overview](../README.md)** - Local setup and development guide

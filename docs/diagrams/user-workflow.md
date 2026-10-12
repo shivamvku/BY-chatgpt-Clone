@@ -6,141 +6,19 @@ This document details the complete user journey through YounderChat, from regist
 
 The user workflow encompasses account management, authentication, conversation management, and AI interactions, all orchestrated through Azure Container Apps with secure backend services.
 
-```mermaid
-graph TB
-    subgraph "User Experience Flow"
-        START["User visits application"]
-        REGISTER["Account Registration"]
-        LOGIN["User Authentication"]
-        DASHBOARD["Conversation Dashboard"]
-        CHAT["AI Chat Interface"]
-        SETTINGS["User Settings"]
-    end
+![YounderChat User Workflow](generated/user-workflow.png)
 
-    subgraph "Azure Container Apps - Frontend"
-        REACT["React SPA<br/>Material UI<br/>TypeScript"]
-        ROUTER["React Router<br/>Client-side routing"]
-        STATE["Zustand State<br/>TanStack Query<br/>Server state sync"]
-    end
-
-    subgraph "Azure Container Apps - Backend API"
-        AUTH_API["Authentication API<br/>/api/auth/*"]
-        CHAT_API["Chat API<br/>/api/chat/*"]
-        USER_API["User API<br/>/api/users/*"]
-        CONV_API["Conversations API<br/>/api/conversations/*"]
-    end
-
-    subgraph "Azure PostgreSQL"
-        USER_DB["Users & Sessions"]
-        CONV_DB["Conversations & Messages"]
-        USAGE_DB["Usage & Plans"]
-    end
-
-    subgraph "Azure Key Vault"
-        DB_SECRETS["Database Connections"]
-        API_SECRETS["AI Provider Keys"]
-    end
-
-    subgraph "AI Providers"
-        GEMINI["Google Gemini"]
-        GROQ["Groq API"]
-    end
-
-    %% User journey flow
-    START --> REGISTER
-    REGISTER --> LOGIN
-    LOGIN --> DASHBOARD
-    DASHBOARD --> CHAT
-    DASHBOARD --> SETTINGS
-
-    %% Frontend interactions
-    REGISTER --> REACT
-    LOGIN --> REACT
-    DASHBOARD --> REACT
-    CHAT --> REACT
-    SETTINGS --> REACT
-
-    REACT --> ROUTER
-    REACT --> STATE
-
-    %% API interactions
-    STATE --> AUTH_API
-    STATE --> CHAT_API
-    STATE --> USER_API
-    STATE --> CONV_API
-
-    %% Backend data flows
-    AUTH_API --> USER_DB
-    CHAT_API --> CONV_DB
-    USER_API --> USER_DB
-    CONV_API --> CONV_DB
-
-    %% Usage tracking
-    CHAT_API --> USAGE_DB
-
-    %% Secret management
-    AUTH_API -.-> DB_SECRETS
-    CHAT_API -.-> DB_SECRETS
-    CHAT_API -.-> API_SECRETS
-
-    %% AI provider integration
-    CHAT_API --> GEMINI
-    CHAT_API --> GROQ
-```
+> *Generated diagram — run `python tools/generate_all_diagrams.py` to refresh*
 
 ## Detailed User Workflows
 
 ### Account Registration and Verification
 
-```mermaid
-sequenceDiagram
-    participant User as User Browser
-    participant App as React Frontend
-    participant API as FastAPI Backend
-    participant DB as PostgreSQL
-    participant Email as Email Service
-
-    User->>App: Access /register
-    App->>User: Registration form
-    User->>App: Submit (email, password, name)
-    
-    App->>API: POST /api/auth/register
-    API->>API: Validate input (Pydantic)
-    API->>API: Hash password (bcrypt)
-    API->>DB: INSERT user (unverified)
-    API->>DB: INSERT verification token
-    
-    alt Email enabled
-        API->>Email: Send verification email
-        Email-->>User: Verification link
-        User->>App: Click verification link
-        App->>API: GET /api/auth/verify/{token}
-        API->>DB: UPDATE user (verified)
-    end
-    
-    API-->>App: Registration success
-    App->>User: Redirect to login
-```
+*The main user workflow diagram above shows the complete registration process. Key steps include form validation, bcrypt password hashing, database storage via private network, and optional email verification when configured.*
 
 ### User Authentication Flow
 
-```mermaid
-sequenceDiagram
-    participant User as User Browser
-    participant App as React Frontend
-    participant API as FastAPI Backend
-    participant DB as PostgreSQL
-    participant KV as Azure Key Vault
-
-    User->>App: Access protected route
-    App->>App: Check auth state
-    
-    alt Not authenticated
-        App->>User: Redirect to /login
-        User->>App: Submit credentials
-        App->>API: POST /api/auth/login
-        
-        API->>KV: Get database connection
+*The comprehensive user workflow diagram shows the complete authentication process including Azure Key Vault integration for secure database connections and session management with HttpOnly cookies.*
         KV-->>API: Connection string
         API->>DB: SELECT user WHERE email = ?
         API->>API: Verify password (bcrypt)

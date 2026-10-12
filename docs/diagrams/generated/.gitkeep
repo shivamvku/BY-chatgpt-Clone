@@ -1,0 +1,2 @@
+# This directory contains generated Azure architecture diagrams
+# Run `python tools/generate_all_diagrams.py` to regenerate

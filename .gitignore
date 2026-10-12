@@ -13,6 +13,11 @@
 /INTERVIEW_QA.local.md
 /docs/*interview*.local.md
 /docs/interview-walkthrough.md
+/docs/prep/
+
+# Generated diagrams (regenerate with tools/generate_all_diagrams.py)
+docs/diagrams/generated/*.png
+docs/diagrams/generated/*.svg
 
 # Python environments, caches, and package output
 .venv/
