@@ -22,7 +22,7 @@ def main() -> None:
         logger.exception("maintenance_failed")
         raise
 
-    logger.info(
+    print(
         json.dumps(
             {
                 "event": "maintenance_completed",
