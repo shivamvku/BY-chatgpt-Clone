@@ -120,3 +120,36 @@ Add low-cardinality metrics for request outcomes, generation state transitions, 
 - Relevant unit/integration/browser tests, lint, formatting, and production build pass.
 - Terraform is formatted and validated; no infrastructure is applied automatically by this remediation branch.
 - Remaining unverified operational risks are explicitly documented rather than reported as fixed.
+
+## Current remediation evidence (2026-10-12)
+
+This section separates code changes from validation that still requires a real PostgreSQL/Azure environment. Items are **not closed** until their acceptance criteria above have supporting evidence.
+
+| Item | Current evidence | Remaining closure gate |
+|---|---|---|
+| TD-01 | Reservation release is idempotent for failed/stopped generations; stale-generation and late-persist regression tests exist. | PostgreSQL concurrency tests for competing requests and rollback behavior. |
+| TD-02 | WebSocket Origin allowlist enforcement and allowed/disallowed-origin tests. | Verify production ALLOWED_ORIGINS values and malformed-origin behavior in deployment. |
+| TD-03 | Process-local WebSocket behavior is documented as best effort; REST/session state remains authoritative. | Confirm product requirements do not depend on cross-replica notification delivery. |
+| TD-04 | Readiness now checks the application tables; deployment smoke also calls the database-backed session endpoint. | Run the deployment smoke against Azure and record image/schema identifiers. |
+| TD-05 | Terminal generation states are protected from late writes; stale work is reconciled. | Add/execute restart and duplicate-provider-claim coverage under PostgreSQL. |
+| TD-06 | Added tests for missing/cross-conversation parents, cycles, and duplicate ordinals. | A self-reference/same-conversation database constraint remains deferred until a safe migration and rollout are designed. |
+| TD-07 | Scheduled retention job has bounded retries and emits structured completion/failure logs. | Verify Azure job failures/retries and define an alert/backlog threshold. |
+| TD-08 | Upload size and per-user storage limits exist; attachments remain in PostgreSQL. | Measure database growth/backup cost before deciding whether to migrate storage. |
+| TD-09 | Existing query bounds and indexes are documented in the register. | Capture realistic PostgreSQL query plans before adding indexes. |
+| TD-10 | PostgreSQL pool size, overflow, and timeout are configurable without changing defaults. | Measure Azure PostgreSQL connection capacity and load-test the replica/job budget. |
+| TD-11 | Transactional quota and idempotency regression tests exist. | Add concurrent PostgreSQL tests for rate-bucket upserts, quota caps, and transaction rollback. |
+| TD-12 | SSE tests cover chunked CRLF, unterminated final frames, and malformed JSON payloads. | Complete browser abort/disconnect/stop race tests and verify final-response UI behavior. |
+| TD-13 | No raw-HTML plugin is configured in the known Markdown dependency set. | Finish a full renderer/link/image/chart audit and add explicit XSS regression tests. |
+| TD-14 | Existing zero-minimum/two-maximum replica and single-revision settings are unchanged for cost safety. | Make scale/revision decisions only after measured latency/cost evidence. |
+| TD-15 | Application release images use immutable registry digests. | Pin the database-access VM image to a validated version and document its update process. |
+| TD-16 | Terraform validation and remote-state roots exist. | Record state ownership/locking/recovery procedure and verify least-privilege access in Azure. |
+| TD-17 | Runtime-role provisioning now verifies no superuser/database-create/role-create privilege, no public-schema CREATE, and required table reads. | Execute the checks against the real database; review whether migration credentials can be narrower than the server administrator. |
+| TD-18 | Upload handler enforces a byte limit, image format allowlist, pixel ceiling, re-encoding, and per-user storage/count limits. | Add concurrent upload/quota tests and verify proxy/ASGI limits remain aligned. |
+| TD-19 | Existing browser coverage exercises branching, regeneration, stop, history, and export; no UI redesign was made. | Complete characterization coverage before any component/state refactor. |
+| TD-20 | CI runs browser tests with deterministic fixtures. | Add multi-tab/concurrent-generation and scaled-replica coverage; keep real-provider tests opt-in. |
+| TD-21 | Model environment variables that are no longer authoritative are documented in configuration comments. | Audit README/runbooks and verify all runtime configuration against deployment values. |
+| TD-22 | Production deployment workflow is limited to main pushes or an explicit manual deploy; deploy runs smoke checks. | Verify branch protection/required checks/review rules in GitHub repository settings. |
+| TD-23 | Request logs include route/status/duration; generation outcomes/duration and maintenance counts/failures are logged without prompt or secret content. | Add/verify provider latency/status, quota rejection, DB pool timeout, and retention-backlog alerting. |
+
+**Do not interpret this evidence table as a 23/23 closure statement.** Some acceptance criteria depend on PostgreSQL concurrency, GitHub repository settings, measured query/load behavior, or a live Azure deployment. Those gates must be completed before the corresponding item is marked done.
+
