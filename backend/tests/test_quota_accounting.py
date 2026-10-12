@@ -141,7 +141,7 @@ def test_late_persist_cannot_resurrect_reconciled_generation(app):
 
 def test_late_streaming_persist_cannot_continue_completed_generation(app):
     client = TestClient(app)
-    user = register(client)
+    register(client)
     conversation_id = conversation(client)
     response = send(client, conversation_id)
     assert response.status_code == 200
