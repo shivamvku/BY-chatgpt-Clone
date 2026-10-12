@@ -100,7 +100,7 @@ def persist(message_id: str, content: str, status: str = "streaming") -> bool:
 
 
 def event(kind: str, value: dict) -> str:
-    return f"event: {kind}\\ndata: {json.dumps(value)}\\n\\n"
+    return f"event: {kind}\ndata: {json.dumps(value)}\n\n"
 
 
 def still_running(message_id: str) -> bool:
