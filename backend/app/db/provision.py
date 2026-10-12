@@ -61,6 +61,25 @@ def provision_runtime():
             )
         connection.execute(text("REVOKE UPDATE, DELETE ON audit_events FROM chat_runtime"))
         connection.execute(text("GRANT SELECT ON schema_status, schema_migrations TO chat_runtime"))
+        runtime_privileges = connection.execute(
+            text(
+                "SELECT rolsuper, rolcreatedb, rolcreaterole "
+                "FROM pg_roles WHERE rolname = 'chat_runtime'"
+            )
+        ).one()
+        if any(runtime_privileges):
+            raise RuntimeError("chat_runtime must not have superuser, database-create, or role-create privileges")
+        if connection.execute(
+            text("SELECT has_schema_privilege('chat_runtime', 'public', 'CREATE')")
+        ).scalar():
+            raise RuntimeError("chat_runtime must not have CREATE privilege on the public schema")
+        if not connection.execute(
+            text(
+                "SELECT has_table_privilege('chat_runtime', 'users', 'SELECT') "
+                "AND has_table_privilege('chat_runtime', 'conversations', 'SELECT')"
+            )
+        ).scalar():
+            raise RuntimeError("chat_runtime is missing required application read privileges")
         observer_url = os.environ.get("OBSERVER_DATABASE_URL")
         if observer_url:
             provision_observer(connection, observer_url)
