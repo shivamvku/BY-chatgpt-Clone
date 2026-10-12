@@ -79,8 +79,6 @@ def test_branch_rejects_parent_cycles(app):
 
 
 def test_message_ordinal_conflicts_are_rejected_by_database(app):
-    from fastapi.testclient import TestClient
-
     client = TestClient(app)
     register(client)
     conversation_id = conversation(client)
