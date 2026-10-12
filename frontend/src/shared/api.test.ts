@@ -87,7 +87,6 @@ describe('SSE streaming parser', () => {
     ]);
   });
 
-
   it('rejects malformed event payloads instead of silently treating them as valid data', async () => {
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
