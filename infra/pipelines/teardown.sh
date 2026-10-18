@@ -102,11 +102,6 @@ if [[ "$mode" == "execute-state" ]]; then
     echo "--state-destruction-confirmed is required for the separate irreversible state deletion" >&2
     exit 1
   }
-  app_group_exists="$(az group exists --name "$EXPECTED_APP_RESOURCE_GROUP" -o tsv)"
-  [[ "$app_group_exists" == "false" ]] || {
-    echo "Refusing to delete Terraform state while the application resource group still exists" >&2
-    exit 1
-  }
 fi
 
 active_subscription="$(az account show --query id -o tsv)"
@@ -114,6 +109,19 @@ active_subscription="$(az account show --query id -o tsv)"
   echo "The active Azure subscription does not match the verified project subscription allowlist" >&2
   exit 1
 }
+
+app_group_exists="$(az group exists --name "$EXPECTED_APP_RESOURCE_GROUP" -o tsv)"
+if [[ "$mode" == "execute-state" ]]; then
+  [[ "$app_group_exists" == "false" ]] || {
+    echo "Refusing to delete Terraform state while the application resource group still exists" >&2
+    exit 1
+  }
+elif [[ "$mode" == "execute-app" ]]; then
+  [[ "$app_group_exists" == "true" ]] || {
+    echo "Refusing app deletion: the application resource group does not exist" >&2
+    exit 1
+  }
+fi
 
 verify_group() {
   local group="$1"
@@ -167,7 +175,7 @@ find_external_tagged_resources() {
   fi
 }
 
-if [[ "$mode" != "execute-state" ]]; then
+if [[ "$mode" != "execute-state" && "$app_group_exists" == "true" ]]; then
   verify_group "$AZURE_RESOURCE_GROUP"
 fi
 verify_group "$TF_STATE_RESOURCE_GROUP"
@@ -177,7 +185,11 @@ find_external_tagged_resources
 if [[ "$mode" == "plan" ]]; then
   echo "Read-only Azure retirement inventory for $AZURE_APP_NAME"
   echo "Subscription: $ARM_SUBSCRIPTION_ID"
-  inventory_group "$AZURE_RESOURCE_GROUP"
+  if [[ "$app_group_exists" == "true" ]]; then
+    inventory_group "$AZURE_RESOURCE_GROUP"
+  else
+    echo "Application resource group $AZURE_RESOURCE_GROUP is already absent."
+  fi
   inventory_group "$TF_STATE_RESOURCE_GROUP"
   echo "Terraform state storage account resource ID: $state_account_id"
   echo "Project-tagged resources across the subscription:"
