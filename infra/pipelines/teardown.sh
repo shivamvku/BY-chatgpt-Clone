@@ -3,6 +3,7 @@
 # Read-only by default. Application and Terraform-state deletion are separate runs.
 set -euo pipefail
 
+readonly EXPECTED_SUBSCRIPTION_ID="2f5f1e55-f00a-4a6e-8b1d-39d87753d886"
 readonly EXPECTED_APP_RESOURCE_GROUP="bychat-dev-rg"
 readonly EXPECTED_STATE_RESOURCE_GROUP="bychat-dev-tfstate-rg"
 readonly EXPECTED_PROJECT_TAG="by-chat"
@@ -77,8 +78,8 @@ done
   echo "Application and state resource groups must be different" >&2
   exit 1
 }
-[[ "$ARM_SUBSCRIPTION_ID" == "$TEARDOWN_ALLOWED_SUBSCRIPTION_ID" ]] || {
-  echo "Refusing: ARM_SUBSCRIPTION_ID does not match TEARDOWN_ALLOWED_SUBSCRIPTION_ID" >&2
+[[ "$ARM_SUBSCRIPTION_ID" == "$EXPECTED_SUBSCRIPTION_ID" && "$TEARDOWN_ALLOWED_SUBSCRIPTION_ID" == "$EXPECTED_SUBSCRIPTION_ID" ]] || {
+  echo "Refusing: both subscription variables must match the pinned project subscription allowlist" >&2
   exit 1
 }
 
@@ -105,7 +106,7 @@ if [[ "$mode" == "execute-state" ]]; then
 fi
 
 active_subscription="$(az account show --query id -o tsv)"
-[[ "$active_subscription" == "$TEARDOWN_ALLOWED_SUBSCRIPTION_ID" ]] || {
+[[ "$active_subscription" == "$EXPECTED_SUBSCRIPTION_ID" ]] || {
   echo "The active Azure subscription does not match the verified project subscription allowlist" >&2
   exit 1
 }
