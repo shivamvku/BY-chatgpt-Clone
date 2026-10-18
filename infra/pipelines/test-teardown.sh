@@ -19,7 +19,7 @@ case "$1 $2" in
     printf '%s\n' "${MOCK_SUBSCRIPTION_ID:-sub-123}"
     ;;
   "group exists")
-    printf '%s\n' "${MOCK_APP_GROUP_EXISTS:-false}"
+    printf '%s\n' "${MOCK_APP_GROUP_EXISTS:-true}"
     ;;
   "group show")
     if [[ "${MOCK_BAD_TAG_GROUP:-}" == "$4" ]]; then
@@ -87,6 +87,13 @@ run_teardown --plan >"$tmp/output.log"
 assert_no_delete
 echo "PASS: plan mode performs no deletion"
 
+# Plan remains useful after the application group has been deleted.
+reset_log
+MOCK_APP_GROUP_EXISTS=false run_teardown --plan >"$tmp/output.log"
+grep -F "Application resource group bychat-dev-rg is already absent." "$tmp/output.log" >/dev/null
+assert_no_delete
+echo "PASS: plan mode inventories remaining state after app deletion"
+
 # Exact resource-group allowlist is checked before any Azure CLI operation.
 reset_log
 expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
@@ -139,7 +146,7 @@ reset_log
 expect_failure "external tagged resource blocks app deletion" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat --backup-confirmed
 
 reset_log
-expect_failure "external tagged resource blocks state deletion" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
+expect_failure "external tagged resource blocks state deletion" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_APP_GROUP_EXISTS=false MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
 
 # Each successful destructive phase is mocked and can delete only its one target group.
 reset_log
@@ -149,7 +156,7 @@ mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
 echo "PASS: application phase deletes only the allowlisted app group"
 
 reset_log
-run_teardown --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed >"$tmp/output.log"
+MOCK_APP_GROUP_EXISTS=false run_teardown --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed >"$tmp/output.log"
 mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
 [[ "${#delete_calls[@]}" -eq 1 && "${delete_calls[0]}" == "group delete --name bychat-dev-tfstate-rg --yes --no-wait" ]] || { echo "FAIL: state phase must delete only the allowlisted state group" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
 echo "PASS: separate state phase deletes only the allowlisted state group"
