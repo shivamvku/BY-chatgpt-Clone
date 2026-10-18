@@ -69,8 +69,8 @@ expect_failure() {
   echo "PASS: $label"
 }
 run_teardown() {
-  env ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID:-sub-123}" \
-    TEARDOWN_ALLOWED_SUBSCRIPTION_ID="${TEARDOWN_ALLOWED_SUBSCRIPTION_ID:-sub-123}" \
+  env ARM_SUBSCRIPTION_ID="sub-123" \
+    TEARDOWN_ALLOWED_SUBSCRIPTION_ID="sub-123" \
     AZURE_APP_NAME="${AZURE_APP_NAME:-younderchat}" \
     AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-bychat-dev-rg}" \
     TF_STATE_RESOURCE_GROUP="${TF_STATE_RESOURCE_GROUP:-bychat-dev-tfstate-rg}" \
