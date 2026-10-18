@@ -124,4 +124,17 @@ reset_log
 expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
 assert_no_delete
 
+reset_log
+expect_failure "external tagged resource blocks execution" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute --confirm-app younderchat --backup-confirmed
+assert_no_delete
+
+# A fully confirmed execution in this test can only reach the mocked Azure CLI.
+reset_log
+run_teardown --execute --confirm-app younderchat --backup-confirmed >"$tmp/output.log"
+mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
+[[ "${#delete_calls[@]}" -eq 2 ]] || { echo "FAIL: expected exactly two mocked resource-group deletions" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
+[[ "${delete_calls[0]}" == "group delete --name bychat-dev-rg --yes --no-wait" ]] || { echo "FAIL: application group must be deleted first" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
+[[ "${delete_calls[1]}" == "group delete --name bychat-dev-tfstate-rg --yes --no-wait" ]] || { echo "FAIL: state group must be deleted last" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
+echo "PASS: confirmed execution targets only the two allowlisted groups, in order"
+
 echo "All teardown safety tests passed."
