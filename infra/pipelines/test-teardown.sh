@@ -70,6 +70,7 @@ expect_failure() {
 }
 run_teardown() {
   env ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID:-sub-123}" \
+    TEARDOWN_ALLOWED_SUBSCRIPTION_ID="${TEARDOWN_ALLOWED_SUBSCRIPTION_ID:-sub-123}" \
     AZURE_APP_NAME="${AZURE_APP_NAME:-younderchat}" \
     AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-bychat-dev-rg}" \
     TF_STATE_RESOURCE_GROUP="${TF_STATE_RESOURCE_GROUP:-bychat-dev-tfstate-rg}" \
@@ -85,37 +86,37 @@ echo "PASS: plan mode performs no deletion"
 
 # Exact allowlist must be checked before any Azure operation.
 reset_log
-expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
 
 reset_log
-expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=other-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=other-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
 
 # Active subscription mismatch.
 reset_log
-expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
 
 # Missing project tag.
 reset_log
-expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
 
 # State account must resolve inside the exact state resource group/subscription.
 reset_log
-expect_failure "state account outside allowlist" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_STATE_ACCOUNT=true PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "state account outside allowlist" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_STATE_ACCOUNT=true PATH="$PATH" "$TEARDOWN" --plan
 
 # Execution requires both confirmations before any Azure CLI call.
 reset_log
-expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --backup-confirmed
+expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --backup-confirmed
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before execution confirmations" >&2; exit 1; }
 
 reset_log
-expect_failure "missing backup confirmation" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --confirm-app younderchat
+expect_failure "missing backup confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --confirm-app younderchat
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before execution confirmations" >&2; exit 1; }
 
 # A tagged project resource outside the target groups blocks both plan approval and execution.
 reset_log
-expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
 assert_no_delete
 
 echo "All teardown safety tests passed."
