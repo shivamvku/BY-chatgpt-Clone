@@ -30,9 +30,9 @@ case "$1 $2" in
     ;;
   "storage account")
     if [[ "${MOCK_BAD_STATE_ACCOUNT:-false}" == true ]]; then
-      printf '%s\n' "/subscriptions/2f5f1e55-f00a-4a6e-8b1d-39d87753d886/resourceGroups/other-rg/providers/Microsoft.Storage/storageAccounts/state123"
+      printf '%s\n' "/subscriptions/2f5f1e55-f00a-4a6e-8b1d-39d87753d886/resourceGroups/other-rg/providers/Microsoft.Storage/storageAccounts/bychatstatemmmy4e"
     else
-      printf '%s\n' "/subscriptions/2f5f1e55-f00a-4a6e-8b1d-39d87753d886/resourceGroups/bychat-dev-tfstate-rg/providers/Microsoft.Storage/storageAccounts/state123"
+      printf '%s\n' "/subscriptions/2f5f1e55-f00a-4a6e-8b1d-39d87753d886/resourceGroups/bychat-dev-tfstate-rg/providers/Microsoft.Storage/storageAccounts/bychatstatemmmy4e"
     fi
     ;;
   "resource list")
@@ -77,7 +77,7 @@ run_teardown() {
     AZURE_APP_NAME="younderchat" \
     AZURE_RESOURCE_GROUP="bychat-dev-rg" \
     TF_STATE_RESOURCE_GROUP="bychat-dev-tfstate-rg" \
-    TF_STATE_STORAGE_ACCOUNT="state123" \
+    TF_STATE_STORAGE_ACCOUNT="bychatstatemmmy4e" \
     "$TEARDOWN" "$@"
 }
 
@@ -98,57 +98,61 @@ echo "PASS: plan mode inventories remaining state after app deletion"
 
 # Exact resource-group allowlist is checked before any Azure CLI operation.
 reset_log
-expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
 
 reset_log
-expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=other-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=other-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
+
+reset_log
+expect_failure "wrong state storage account name" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=wrongstorage PATH="$PATH" "$TEARDOWN" --plan
+[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before state storage allowlist validation" >&2; exit 1; }
 
 # Subscription allowlist and active subscription checks.
 reset_log
-expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
 
 reset_log
-expect_failure "subscription differs from explicit allowlist" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=other-sub AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "subscription differs from explicit allowlist" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=other-sub AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before subscription allowlist validation" >&2; exit 1; }
 
 # Missing tag and a state account outside the expected subscription/resource group fail closed.
 reset_log
-expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
 
 reset_log
-expect_failure "state account outside allowlist" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_STATE_ACCOUNT=true PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "state account outside allowlist" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_BAD_STATE_ACCOUNT=true PATH="$PATH" "$TEARDOWN" --plan
 
 # Application deletion requires both app confirmation and backup confirmation before Azure calls.
 reset_log
-expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-app --backup-confirmed
+expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --execute-app --backup-confirmed
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before app execution confirmations" >&2; exit 1; }
 
 reset_log
-expect_failure "missing application backup confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat
+expect_failure "missing application backup confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before app backup confirmation" >&2; exit 1; }
 
 # State deletion has its own confirmation and is blocked while the app group exists.
 reset_log
-expect_failure "missing state group confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-state --state-destruction-confirmed
+expect_failure "missing state group confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --execute-state --state-destruction-confirmed
 
 reset_log
-expect_failure "missing state destruction confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg
+expect_failure "missing state destruction confirmation" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before state destruction confirmation" >&2; exit 1; }
 
 reset_log
-expect_failure "state deletion blocked while app group exists" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_APP_GROUP_EXISTS=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
+expect_failure "state deletion blocked while app group exists" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_APP_GROUP_EXISTS=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
 
 # Tagged project resources outside the two groups block both phases.
 reset_log
-expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
+expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
 
 reset_log
-expect_failure "external tagged resource blocks app deletion" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat --backup-confirmed
+expect_failure "external tagged resource blocks app deletion" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat --backup-confirmed
 
 reset_log
-expect_failure "external tagged resource blocks state deletion" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_APP_GROUP_EXISTS=false MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
+expect_failure "external tagged resource blocks state deletion" env ARM_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=2f5f1e55-f00a-4a6e-8b1d-39d87753d886 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=bychatstatemmmy4e MOCK_APP_GROUP_EXISTS=false MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
 
 # Each successful destructive phase is mocked and can delete only its one target group.
 reset_log
