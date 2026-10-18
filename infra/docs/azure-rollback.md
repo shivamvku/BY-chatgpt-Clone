@@ -40,15 +40,25 @@ The following are outside these Azure groups and must be handled separately:
    ```
 
 6. Review the listed groups and resources. Verify the subscription ID, application name, data export, and external DNS plan with the service owner.
-7. Execute the guarded deletion. The application group is deleted first; the state group is deleted only after the first operation completes:
+7. Delete only the application resource group. This command does not delete Terraform state:
 
    ```bash
-   bash infra/pipelines/teardown.sh --execute \
+   bash infra/pipelines/teardown.sh --execute-app \
      --confirm-app "$AZURE_APP_NAME" \
      --backup-confirmed
    ```
 
-8. Verify both resource groups are absent with `az group exists`, then run a subscription-wide `az resource list --subscription "$ARM_SUBSCRIPTION_ID" -o table` inventory and confirm no project-owned resources remain. Inspect resources that are not tagged, as the script cannot infer ownership from names alone. Remove unused GoDaddy DNS records and, once the project is permanently retired, GitHub deployment variables/secrets and environments. Review subscription-level provider registrations and Entra objects separately; do not unregister shared providers or delete shared identities.
+8. Verify the application group is absent, rerun `--plan`, and review the remaining state inventory. Only after that separate review, delete the Terraform state group in a second invocation:
+
+   ```bash
+   bash infra/pipelines/teardown.sh --execute-state \
+     --confirm-state-group "$TF_STATE_RESOURCE_GROUP" \
+     --state-destruction-confirmed
+   ```
+
+   This final step irreversibly removes remote Terraform state. It requires its own explicit confirmation and refuses to run while the application group still exists.
+
+9. Verify both resource groups are absent with `az group exists`, then run a subscription-wide `az resource list --subscription "$ARM_SUBSCRIPTION_ID" -o table` inventory and confirm no project-owned resources remain. Inspect resources that are not tagged, as the script cannot infer ownership from names alone. Remove unused GoDaddy DNS records and, once the project is permanently retired, GitHub deployment variables/secrets and environments. Review subscription-level provider registrations and Entra objects separately; do not unregister shared providers or delete shared identities.
 
 ## Recovery limits
 
