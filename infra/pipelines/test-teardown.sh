@@ -34,7 +34,7 @@ case "$1 $2" in
     ;;
   "resource list")
     if [[ "${MOCK_EXTERNAL_TAGGED_RESOURCE:-false}" == true && " $* " == *" --tag "* ]]; then
-      printf '%s\n' $'other-rg\t/resource/id\tother-resource\tMicrosoft.Storage/storageAccounts'
+      printf '%s\t%s\t%s\t%s\n' 'other-rg' '/resource/id' 'other-resource' 'Microsoft.Storage/storageAccounts'
     fi
     ;;
   "storage blob")
