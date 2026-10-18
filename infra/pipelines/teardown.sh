@@ -9,7 +9,7 @@ readonly EXPECTED_PROJECT_TAG="by-chat"
 
 usage() {
   cat <<'EOF'
-Usage: bash infra/pipelines/teardown.sh [--plan | --execute] \\
+Usage: bash infra/pipelines/teardown.sh [--plan | --execute] \
   --confirm-app <AZURE_APP_NAME> --backup-confirmed
 
 Required environment variables:
@@ -18,7 +18,9 @@ Required environment variables:
 
 --plan is read-only and is the default. --execute permanently deletes the
 application resource group first, then the Terraform state resource group.
-The resource-group names are allowlisted in this script. Set TEARDOWN_ALLOWED_SUBSCRIPTION_ID\nto the independently verified subscription ID for this project; it must match ARM_SUBSCRIPTION_ID.
+The resource-group names are allowlisted in this script.
+Set TEARDOWN_ALLOWED_SUBSCRIPTION_ID to the independently verified project subscription ID;
+it must match ARM_SUBSCRIPTION_ID and the active Azure subscription.
 EOF
 }
 
