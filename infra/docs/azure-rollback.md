@@ -1,6 +1,6 @@
-# Azure rollback and retirement plan
+# Azure retirement and complete shutdown plan
 
-This is the approved shutdown path for the YounderChat development deployment. It is source-controlled infrastructure automation, not a portal procedure. The teardown command is intentionally destructive only with explicit flags and does not run in CI.
+This is the proposed shutdown path for the YounderChat development deployment. It is source-controlled infrastructure automation, not a portal procedure. The teardown command is read-only by default; its safety tests run in CI with a mocked Azure CLI, and CI never runs destructive execution. Keep this PR unmerged and do not execute teardown until the owner has verified the subscription allowlist, inventory and backups.
 
 ## Azure inventory
 
@@ -13,6 +13,8 @@ The deployment has two Azure resource groups.
 
 The bootstrap root deliberately uses `prevent_destroy` on the state account. A resource-group deletion is therefore the only supported final step after application deletion: it removes the bootstrap group and the remote state together. It is performed by the checked-in `infra/pipelines/teardown.sh` script after explicit confirmation.
 
+The teardown script refuses to proceed unless the active subscription and `ARM_SUBSCRIPTION_ID` match the independently supplied `TEARDOWN_ALLOWED_SUBSCRIPTION_ID`, both resource-group names match the exact allowlist in the script, both groups carry `project=by-chat`, and the state storage account is located in the expected state group. It also blocks if it finds project-tagged resources in other resource groups. The tag query is not proof that no untagged resources exist: inspect the full subscription inventory and identify project ownership manually before execution. Any additional project-owned resources outside the two allowlisted groups must be separately reviewed and removed before this script can run.
+
 The following are outside these Azure groups and must be handled separately:
 
 - GoDaddy DNS records for `aichat.sdigurukulam.in`.
@@ -24,8 +26,14 @@ The following are outside these Azure groups and must be handled separately:
 1. Pause releases and tell users the service will retire. Do not merge or dispatch an Application release while teardown is in progress.
 2. Preserve data that must survive deletion. Export PostgreSQL data and any retained user image files to an approved encrypted location. Keep an independent record of the deployed image digest and Azure resource inventory. Do not export Terraform state to a workstation or attach it to a ticket: it can contain credentials.
 3. Remove the custom-domain records at GoDaddy after the service is no longer needed. This prevents a dangling DNS record after the Container App is deleted.
-4. Authenticate with an Azure principal that can delete both resource groups. Set the environment values already used by deployment (`ARM_SUBSCRIPTION_ID`, `AZURE_APP_NAME`, `AZURE_RESOURCE_GROUP`, `TF_STATE_RESOURCE_GROUP`, and `TF_STATE_STORAGE_ACCOUNT`).
-5. Run the read-only inventory:
+4. Authenticate with an Azure principal that can delete both resource groups. Set `TEARDOWN_ALLOWED_SUBSCRIPTION_ID` to the independently verified subscription ID for this project (from the Azure portal/subscription record), and set `ARM_SUBSCRIPTION_ID` to the same value. Also set `AZURE_APP_NAME`, `AZURE_RESOURCE_GROUP=bychat-dev-rg`, `TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg`, and the exact `TF_STATE_STORAGE_ACCOUNT` name. Do not copy the active subscription ID blindly: verify it is the intended project subscription first.
+5. Run the mocked safety tests locally before the read-only inventory. These tests make no Azure calls:
+
+   ```bash
+   bash infra/pipelines/test-teardown.sh
+   ```
+
+   Then run the read-only inventory:
 
    ```bash
    bash infra/pipelines/teardown.sh --plan
@@ -40,7 +48,7 @@ The following are outside these Azure groups and must be handled separately:
      --backup-confirmed
    ```
 
-8. Verify both resource groups are absent with `az group exists`. Remove unused GoDaddy DNS records and, once the project is permanently retired, GitHub deployment variables/secrets and environments.
+8. Verify both resource groups are absent with `az group exists`, then run a subscription-wide `az resource list --subscription "$ARM_SUBSCRIPTION_ID" -o table` inventory and confirm no project-owned resources remain. Inspect resources that are not tagged, as the script cannot infer ownership from names alone. Remove unused GoDaddy DNS records and, once the project is permanently retired, GitHub deployment variables/secrets and environments. Review subscription-level provider registrations and Entra objects separately; do not unregister shared providers or delete shared identities.
 
 ## Recovery limits
 
