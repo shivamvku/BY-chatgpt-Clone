@@ -13,12 +13,12 @@ Usage: bash infra/pipelines/teardown.sh [--plan | --execute] \\
   --confirm-app <AZURE_APP_NAME> --backup-confirmed
 
 Required environment variables:
-  ARM_SUBSCRIPTION_ID, AZURE_APP_NAME, AZURE_RESOURCE_GROUP,
-  TF_STATE_RESOURCE_GROUP, TF_STATE_STORAGE_ACCOUNT
+  ARM_SUBSCRIPTION_ID, TEARDOWN_ALLOWED_SUBSCRIPTION_ID, AZURE_APP_NAME,
+  AZURE_RESOURCE_GROUP, TF_STATE_RESOURCE_GROUP, TF_STATE_STORAGE_ACCOUNT
 
 --plan is read-only and is the default. --execute permanently deletes the
 application resource group first, then the Terraform state resource group.
-The exact subscription and resource-group names are allowlisted in this script.
+The resource-group names are allowlisted in this script. Set TEARDOWN_ALLOWED_SUBSCRIPTION_ID\nto the independently verified subscription ID for this project; it must match ARM_SUBSCRIPTION_ID.
 EOF
 }
 
@@ -42,6 +42,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 : "${ARM_SUBSCRIPTION_ID:?ARM_SUBSCRIPTION_ID is required}"
+: "${TEARDOWN_ALLOWED_SUBSCRIPTION_ID:?Set TEARDOWN_ALLOWED_SUBSCRIPTION_ID to the verified project subscription ID}"
 : "${AZURE_APP_NAME:?AZURE_APP_NAME is required}"
 : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP is required}"
 : "${TF_STATE_RESOURCE_GROUP:?TF_STATE_RESOURCE_GROUP is required}"
@@ -72,9 +73,13 @@ if [[ "$mode" == "execute" ]]; then
   }
 fi
 
+[[ "$ARM_SUBSCRIPTION_ID" == "$TEARDOWN_ALLOWED_SUBSCRIPTION_ID" ]] || {
+  echo "Refusing: ARM_SUBSCRIPTION_ID does not match TEARDOWN_ALLOWED_SUBSCRIPTION_ID" >&2
+  exit 1
+}
 active_subscription="$(az account show --query id -o tsv)"
-[[ "$active_subscription" == "$ARM_SUBSCRIPTION_ID" ]] || {
-  echo "The active Azure subscription does not match ARM_SUBSCRIPTION_ID" >&2
+[[ "$active_subscription" == "$TEARDOWN_ALLOWED_SUBSCRIPTION_ID" ]] || {
+  echo "The active Azure subscription does not match the verified project subscription allowlist" >&2
   exit 1
 }
 
