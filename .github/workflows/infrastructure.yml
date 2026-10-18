@@ -53,6 +53,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Test Azure teardown safety (mocked Azure CLI)
+        run: bash infra/pipelines/test-teardown.sh
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.13.5
