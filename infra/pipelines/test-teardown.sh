@@ -89,7 +89,9 @@ echo "PASS: plan mode performs no deletion"
 
 # Plan remains useful after the application group has been deleted.
 reset_log
-MOCK_APP_GROUP_EXISTS=false run_teardown --plan >"$tmp/output.log"
+export MOCK_APP_GROUP_EXISTS=false
+run_teardown --plan >"$tmp/output.log"
+unset MOCK_APP_GROUP_EXISTS
 grep -F "Application resource group bychat-dev-rg is already absent." "$tmp/output.log" >/dev/null
 assert_no_delete
 echo "PASS: plan mode inventories remaining state after app deletion"
@@ -156,7 +158,9 @@ mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
 echo "PASS: application phase deletes only the allowlisted app group"
 
 reset_log
-MOCK_APP_GROUP_EXISTS=false run_teardown --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed >"$tmp/output.log"
+export MOCK_APP_GROUP_EXISTS=false
+run_teardown --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed >"$tmp/output.log"
+unset MOCK_APP_GROUP_EXISTS
 mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
 [[ "${#delete_calls[@]}" -eq 1 && "${delete_calls[0]}" == "group delete --name bychat-dev-tfstate-rg --yes --no-wait" ]] || { echo "FAIL: state phase must delete only the allowlisted state group" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
 echo "PASS: separate state phase deletes only the allowlisted state group"
