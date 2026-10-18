@@ -6,6 +6,7 @@ set -euo pipefail
 readonly EXPECTED_SUBSCRIPTION_ID="2f5f1e55-f00a-4a6e-8b1d-39d87753d886"
 readonly EXPECTED_APP_RESOURCE_GROUP="bychat-dev-rg"
 readonly EXPECTED_STATE_RESOURCE_GROUP="bychat-dev-tfstate-rg"
+readonly EXPECTED_STATE_STORAGE_ACCOUNT="bychatstatemmmy4e"
 readonly EXPECTED_PROJECT_TAG="by-chat"
 
 usage() {
@@ -64,6 +65,10 @@ done
 : "${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP is required}"
 : "${TF_STATE_RESOURCE_GROUP:?TF_STATE_RESOURCE_GROUP is required}"
 : "${TF_STATE_STORAGE_ACCOUNT:?TF_STATE_STORAGE_ACCOUNT is required}"
+[[ "$TF_STATE_STORAGE_ACCOUNT" == "$EXPECTED_STATE_STORAGE_ACCOUNT" ]] || {
+  echo "Refusing: TF_STATE_STORAGE_ACCOUNT must be exactly $EXPECTED_STATE_STORAGE_ACCOUNT" >&2
+  exit 1
+}
 
 # Validate configured targets before calling Azure or printing an inventory.
 [[ "$AZURE_RESOURCE_GROUP" == "$EXPECTED_APP_RESOURCE_GROUP" ]] || {
