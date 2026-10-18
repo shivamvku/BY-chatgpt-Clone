@@ -18,6 +18,9 @@ case "$1 $2" in
   "account show")
     printf '%s\n' "${MOCK_SUBSCRIPTION_ID:-sub-123}"
     ;;
+  "group exists")
+    printf '%s\n' "${MOCK_APP_GROUP_EXISTS:-false}"
+    ;;
   "group show")
     if [[ "${MOCK_BAD_TAG_GROUP:-}" == "$4" ]]; then
       printf '%s\n' "None"
@@ -71,20 +74,20 @@ expect_failure() {
 run_teardown() {
   env ARM_SUBSCRIPTION_ID="sub-123" \
     TEARDOWN_ALLOWED_SUBSCRIPTION_ID="sub-123" \
-    AZURE_APP_NAME="${AZURE_APP_NAME:-younderchat}" \
-    AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-bychat-dev-rg}" \
-    TF_STATE_RESOURCE_GROUP="${TF_STATE_RESOURCE_GROUP:-bychat-dev-tfstate-rg}" \
-    TF_STATE_STORAGE_ACCOUNT="${TF_STATE_STORAGE_ACCOUNT:-state123}" \
+    AZURE_APP_NAME="younderchat" \
+    AZURE_RESOURCE_GROUP="bychat-dev-rg" \
+    TF_STATE_RESOURCE_GROUP="bychat-dev-tfstate-rg" \
+    TF_STATE_STORAGE_ACCOUNT="state123" \
     "$TEARDOWN" "$@"
 }
 
-# Valid plan is read-only.
+# Plan is read-only.
 reset_log
 run_teardown --plan >"$tmp/output.log"
 assert_no_delete
 echo "PASS: plan mode performs no deletion"
 
-# Exact allowlist must be checked before any Azure operation.
+# Exact resource-group allowlist is checked before any Azure CLI operation.
 reset_log
 expect_failure "wrong application resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=other-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
@@ -93,48 +96,62 @@ reset_log
 expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=other-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before target allowlist validation" >&2; exit 1; }
 
-# Active subscription mismatch.
+# Subscription allowlist and active subscription checks.
 reset_log
 expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
 
-# Explicit project allowlist must match the deployment subscription variable.
 reset_log
 expect_failure "subscription differs from explicit allowlist" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=other-sub AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
 [[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before subscription allowlist validation" >&2; exit 1; }
 
-# Missing project tag.
+# Missing tag and a state account outside the expected subscription/resource group fail closed.
 reset_log
 expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
 
-# State account must resolve inside the exact state resource group/subscription.
 reset_log
 expect_failure "state account outside allowlist" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_STATE_ACCOUNT=true PATH="$PATH" "$TEARDOWN" --plan
 
-# Execution requires both confirmations before any Azure CLI call.
+# Application deletion requires both app confirmation and backup confirmation before Azure calls.
 reset_log
-expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --backup-confirmed
-[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before execution confirmations" >&2; exit 1; }
+expect_failure "missing application confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-app --backup-confirmed
+[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before app execution confirmations" >&2; exit 1; }
 
 reset_log
-expect_failure "missing backup confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute --confirm-app younderchat
-[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before execution confirmations" >&2; exit 1; }
+expect_failure "missing application backup confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat
+[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before app backup confirmation" >&2; exit 1; }
 
-# A tagged project resource outside the target groups blocks both plan approval and execution.
+# State deletion has its own confirmation and is blocked while the app group exists.
+reset_log
+expect_failure "missing state group confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-state --state-destruction-confirmed
+
+reset_log
+expect_failure "missing state destruction confirmation" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg
+[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before state destruction confirmation" >&2; exit 1; }
+
+reset_log
+expect_failure "state deletion blocked while app group exists" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_APP_GROUP_EXISTS=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
+
+# Tagged project resources outside the two groups block both phases.
 reset_log
 expect_failure "external tagged resource blocks plan" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --plan
-assert_no_delete
 
 reset_log
-expect_failure "external tagged resource blocks execution" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute --confirm-app younderchat --backup-confirmed
-assert_no_delete
+expect_failure "external tagged resource blocks app deletion" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-app --confirm-app younderchat --backup-confirmed
 
-# A fully confirmed execution in this test can only reach the mocked Azure CLI.
 reset_log
-run_teardown --execute --confirm-app younderchat --backup-confirmed >"$tmp/output.log"
+expect_failure "external tagged resource blocks state deletion" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_EXTERNAL_TAGGED_RESOURCE=true PATH="$PATH" "$TEARDOWN" --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed
+
+# Each successful destructive phase is mocked and can delete only its one target group.
+reset_log
+run_teardown --execute-app --confirm-app younderchat --backup-confirmed >"$tmp/output.log"
 mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
-[[ "${#delete_calls[@]}" -eq 2 ]] || { echo "FAIL: expected exactly two mocked resource-group deletions" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
-[[ "${delete_calls[0]}" == "group delete --name bychat-dev-rg --yes --no-wait" ]] || { echo "FAIL: application group must be deleted first" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
-[[ "${delete_calls[1]}" == "group delete --name bychat-dev-tfstate-rg --yes --no-wait" ]] || { echo "FAIL: state group must be deleted last" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
-echo "PASS: confirmed execution targets only the two allowlisted groups, in order"
+[[ "${#delete_calls[@]}" -eq 1 && "${delete_calls[0]}" == "group delete --name bychat-dev-rg --yes --no-wait" ]] || { echo "FAIL: app phase must delete only the app group" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
+echo "PASS: application phase deletes only the allowlisted app group"
+
+reset_log
+run_teardown --execute-state --confirm-state-group bychat-dev-tfstate-rg --state-destruction-confirmed >"$tmp/output.log"
+mapfile -t delete_calls < <(grep '^group delete ' "$MOCK_AZ_LOG")
+[[ "${#delete_calls[@]}" -eq 1 && "${delete_calls[0]}" == "group delete --name bychat-dev-tfstate-rg --yes --no-wait" ]] || { echo "FAIL: state phase must delete only the allowlisted state group" >&2; cat "$MOCK_AZ_LOG" >&2; exit 1; }
+echo "PASS: separate state phase deletes only the allowlisted state group"
 
 echo "All teardown safety tests passed."
