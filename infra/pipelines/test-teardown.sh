@@ -97,6 +97,11 @@ expect_failure "wrong state resource group" env ARM_SUBSCRIPTION_ID=sub-123 TEAR
 reset_log
 expect_failure "wrong active subscription" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_SUBSCRIPTION_ID=wrong-sub PATH="$PATH" "$TEARDOWN" --plan
 
+# Explicit project allowlist must match the deployment subscription variable.
+reset_log
+expect_failure "subscription differs from explicit allowlist" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=other-sub AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 PATH="$PATH" "$TEARDOWN" --plan
+[[ ! -s "$MOCK_AZ_LOG" ]] || { echo "FAIL: Azure CLI called before subscription allowlist validation" >&2; exit 1; }
+
 # Missing project tag.
 reset_log
 expect_failure "missing project tag" env ARM_SUBSCRIPTION_ID=sub-123 TEARDOWN_ALLOWED_SUBSCRIPTION_ID=sub-123 AZURE_APP_NAME=younderchat AZURE_RESOURCE_GROUP=bychat-dev-rg TF_STATE_RESOURCE_GROUP=bychat-dev-tfstate-rg TF_STATE_STORAGE_ACCOUNT=state123 MOCK_BAD_TAG_GROUP=bychat-dev-rg PATH="$PATH" "$TEARDOWN" --plan
